@@ -43,16 +43,35 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed design decisions.
 - PostgreSQL 12+
 - Virtual environment (recommended)
 
-## Quick Demo
+## Quick Start
 
-Want to see it in action? After installation, run:
+### Easy Launch from Desktop (Windows)
 
-```bash
-python scripts/seed_data.py  # Populate with sample data
+For convenience, launcher scripts have been created on your Desktop:
+
+- **Double-click** `run-job-tracker.bat` on your Desktop to launch the application
+- Or right-click `run-job-tracker.ps1` → "Run with PowerShell"
+
+### From PowerShell
+
+Navigate to the project directory and activate your virtual environment:
+
+```powershell
+cd "C:\Users\kingm\OneDrive\Desktop\IDEs\Python Projects\Application-Tracker"
+.venv\Scripts\Activate.ps1
+python -m job_tracker.cli menu
+```
+
+### Want Sample Data?
+
+Populate with sample applications first:
+
+```powershell
+python scripts/seed_data.py  # Creates 8 sample applications
 python -m job_tracker.cli menu  # Launch interactive interface
 ```
 
-This creates 8 sample applications across tech companies with various statuses (Applied, Interview Scheduled, Offer, Rejected, etc.)
+This creates sample applications with various statuses (Applied, Interview Scheduled, Offer, Rejected, etc.)
 
 ## Installation
 
