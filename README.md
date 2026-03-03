@@ -5,6 +5,7 @@ A PostgreSQL-backed CLI application for managing job applications with built-in 
 ## Features
 
 - **Structured Application Management**: Track companies, positions, recruiters, and applications with relational integrity
+- **Optional Job ID Tracking**: Store an external posting reference (LinkedIn, Greenhouse, Workday, etc.) per application
 - **State Machine Validation**: Enforces valid status transitions (Applied → Interview → Offer, etc.)
 - **Event Timeline**: Automatic logging of status changes and manual event tracking
 - **Analytics Dashboard**: Conversion rates, response times, and status distribution metrics
@@ -129,7 +130,7 @@ This launches an interactive menu with numbered options and formatted tables.
 python -m job_tracker.cli add-company --name "Google" --industry "Technology"
 
 # Create an application
-python -m job_tracker.cli add-application --company-id 1 --position-id 1
+python -m job_tracker.cli add-application --company-id 1 --position-id 1 --job-id "GH-12345"
 
 # View analytics
 python -m job_tracker.cli analytics
@@ -174,6 +175,7 @@ pytest tests/services/
 
 The application uses a normalized relational schema with:
 - Companies and positions (many-to-many via applications)
+- Optional `applications.job_id` for external posting references
 - Application status with transition validation
 - Event logging for audit trail
 - Recruiter contacts linked to companies
@@ -187,5 +189,4 @@ See [docs/SCHEMA.md](docs/SCHEMA.md) for the complete schema diagram.
 - [ ] Calendar integration for interview scheduling
 - [ ] Resume/cover letter attachment tracking
 - [ ] Company research notes and links
-
 

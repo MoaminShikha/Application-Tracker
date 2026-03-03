@@ -59,11 +59,13 @@ CREATE TABLE IF NOT EXISTS applications
     company_id     INTEGER     NOT NULL REFERENCES companies (id) ON DELETE RESTRICT,
     position_id    INTEGER     NOT NULL REFERENCES positions (id) ON DELETE RESTRICT,
     recruiter_id   INTEGER     REFERENCES recruiters (id) ON DELETE SET NULL,
+    job_id         VARCHAR(100),
     current_status INTEGER     NOT NULL REFERENCES application_statuses (id) ON DELETE RESTRICT,
     applied_date   DATE        NOT NULL DEFAULT CURRENT_DATE,
     notes          VARCHAR(255),
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (job_id IS NULL OR job_id <> ''),
     CHECK (applied_date <= CURRENT_DATE),
     CHECK (applied_date >= CURRENT_DATE - INTERVAL '365 days')
 );
@@ -103,3 +105,5 @@ CREATE INDEX IF NOT EXISTS idx_application_events_application_id ON application_
 -- Case-insensitive company name lookups
 CREATE INDEX IF NOT EXISTS idx_companies_name_lower ON companies (LOWER(name));
 
+-- Speed up applications looked up by external posting ID
+CREATE INDEX IF NOT EXISTS idx_applications_job_id ON applications (job_id);

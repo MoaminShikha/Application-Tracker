@@ -73,13 +73,19 @@ INSERT INTO applications (company_id, position_id, current_status, applied_date)
 VALUES (1, 1, 1, CURRENT_DATE - INTERVAL '400 days');
 
 
--- Test 2.12: Empty String in event_type
+-- Test 2.12: Empty String in applications.job_id (when provided)
+-- Expected: FAIL - CHECK constraint violated (job_id IS NULL OR job_id <> '')
+INSERT INTO applications (company_id, position_id, current_status, applied_date, job_id)
+VALUES (1, 1, 1, CURRENT_DATE, '');
+
+
+-- Test 2.13: Empty String in event_type
 -- Expected: FAIL - CHECK constraint violated (event_type <> '')
 INSERT INTO application_events (application_id, event_type)
 VALUES (1, '');
 
 
--- Test 2.13: Future event_date
+-- Test 2.14: Future event_date
 -- Expected: FAIL - CHECK constraint violated (event_date <= NOW())
 INSERT INTO application_events (application_id, event_type, event_date)
 VALUES (1, 'Application Sent', NOW() + INTERVAL '1 day');
@@ -89,11 +95,10 @@ VALUES (1, 'Application Sent', NOW() + INTERVAL '1 day');
 -- SUMMARY: CHECK Constraints Test
 -- ============================================================================
 -- Expected Results:
--- All 13 tests should FAIL with CHECK constraint violations
+-- All 14 tests should FAIL with CHECK constraint violations
 -- This proves CHECK constraints are working correctly
 --
 -- Constraints Tested:
--- - Empty string prevention (name, title, level, status_name, event_type, etc.)
+-- - Empty string prevention (name, title, level, status_name, event_type, job_id, etc.)
 -- - Date validation (no future dates, no dates older than 365 days)
--- - Conditional empty string checks (email, phone, industry when provided)
-
+-- - Conditional empty string checks (email, phone, industry, job_id when provided)

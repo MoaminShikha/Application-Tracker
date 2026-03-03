@@ -95,6 +95,7 @@ class AnalyticsService(BaseService):
         query = """
             SELECT
                 a.id,
+                a.job_id,
                 c.name AS company,
                 p.title AS position,
                 s.status_name AS status,
@@ -108,4 +109,3 @@ class AnalyticsService(BaseService):
         """
         with self._executor() as (_, executor):
             return executor.execute_query(query, (days,))
-

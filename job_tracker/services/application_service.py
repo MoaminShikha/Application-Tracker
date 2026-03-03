@@ -17,6 +17,7 @@ class ApplicationService(BaseService):
         position_id: int,
         applied_date: Optional[date] = None,
         recruiter_id: Optional[int] = None,
+        job_id: Optional[str] = None,
         notes: Optional[str] = None,
     ) -> Application:
         status_id = self._get_status_id_by_name("Applied")
@@ -27,6 +28,7 @@ class ApplicationService(BaseService):
             company_id=company_id,
             position_id=position_id,
             recruiter_id=recruiter_id,
+            job_id=job_id,
             current_status=status_id,
             applied_date=applied_date or date.today(),
             notes=notes,
@@ -34,9 +36,9 @@ class ApplicationService(BaseService):
         application.validate()
 
         insert_app_query = """
-            INSERT INTO applications (company_id, position_id, recruiter_id, current_status, applied_date, notes)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            RETURNING id, company_id, position_id, recruiter_id, current_status, applied_date, notes, created_at, updated_at
+            INSERT INTO applications (company_id, position_id, recruiter_id, job_id, current_status, applied_date, notes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id, company_id, position_id, recruiter_id, job_id, current_status, applied_date, notes, created_at, updated_at
         """
 
         insert_event_query = """
@@ -52,6 +54,7 @@ class ApplicationService(BaseService):
                         application.company_id,
                         application.position_id,
                         application.recruiter_id,
+                        application.job_id,
                         application.current_status,
                         application.applied_date,
                         application.notes,
@@ -73,7 +76,7 @@ class ApplicationService(BaseService):
 
     def get_application(self, application_id: int) -> Optional[Application]:
         query = """
-            SELECT id, company_id, position_id, recruiter_id, current_status, applied_date, notes, created_at, updated_at
+            SELECT id, company_id, position_id, recruiter_id, job_id, current_status, applied_date, notes, created_at, updated_at
             FROM applications
             WHERE id = %s
         """
@@ -84,7 +87,7 @@ class ApplicationService(BaseService):
 
     def get_all_applications(self) -> List[Application]:
         query = """
-            SELECT id, company_id, position_id, recruiter_id, current_status, applied_date, notes, created_at, updated_at
+            SELECT id, company_id, position_id, recruiter_id, job_id, current_status, applied_date, notes, created_at, updated_at
             FROM applications
             ORDER BY created_at DESC
         """
@@ -111,7 +114,7 @@ class ApplicationService(BaseService):
             UPDATE applications
             SET current_status = %s, updated_at = NOW()
             WHERE id = %s
-            RETURNING id, company_id, position_id, recruiter_id, current_status, applied_date, notes, created_at, updated_at
+            RETURNING id, company_id, position_id, recruiter_id, job_id, current_status, applied_date, notes, created_at, updated_at
         """
 
         insert_event_query = """
@@ -136,7 +139,7 @@ class ApplicationService(BaseService):
                 raise
 
     def update_application(self, application_id: int, **fields) -> Optional[Application]:
-        allowed_fields = {"company_id", "position_id", "recruiter_id", "applied_date", "notes"}
+        allowed_fields = {"company_id", "position_id", "recruiter_id", "job_id", "applied_date", "notes"}
         updates = {k: v for k, v in fields.items() if k in allowed_fields}
         if not updates:
             raise ValueError("No valid fields provided for update")
@@ -154,7 +157,7 @@ class ApplicationService(BaseService):
             UPDATE applications
             SET {', '.join(set_clauses)}
             WHERE id = %s
-            RETURNING id, company_id, position_id, recruiter_id, current_status, applied_date, notes, created_at, updated_at
+            RETURNING id, company_id, position_id, recruiter_id, job_id, current_status, applied_date, notes, created_at, updated_at
         """
 
         with self._executor() as (db, executor):

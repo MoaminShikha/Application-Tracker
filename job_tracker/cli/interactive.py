@@ -113,6 +113,8 @@ def prompt_application_details():
 
     position_id = click.prompt("Select position ID", type=int)
 
+    job_id = click.prompt("Job ID / Posting ID (optional, press Enter to skip)", default="", show_default=False)
+
     # Optional fields
     use_today = click.confirm("Applied today?", default=True)
     applied_date = None
@@ -141,6 +143,7 @@ def prompt_application_details():
     return {
         "company_id": company_id,
         "position_id": position_id,
+        "job_id": job_id if job_id else None,
         "applied_date": applied_date,
         "recruiter_id": recruiter_id,
         "notes": notes if notes else None,
@@ -285,7 +288,10 @@ def interactive_add_application():
         details = prompt_application_details()
         svc = ApplicationService()
         app = svc.create_application(**details)
-        click.echo(f"\n✅ Created application #{app.id} for company ID {app.company_id}")
+        message = f"\n✅ Created application #{app.id} for company ID {app.company_id}"
+        if app.job_id:
+            message += f" (Job ID: {app.job_id})"
+        click.echo(message)
     except Exception as e:
         click.echo(f"\n❌ Error: {e}", err=True)
 
@@ -345,6 +351,142 @@ def interactive_show_history():
         click.echo("=" * 50)
         for e in events:
             click.echo(f"{e.event_date}\t{e.event_type}\t{e.notes or ''}")
+    except Exception as e:
+        click.echo(f"\n❌ Error: {e}", err=True)
+
+
+@interactive.command("delete-application")
+def interactive_delete_application():
+    """Delete an application with confirmation."""
+    try:
+        click.echo("\n🗑️  Delete Application")
+        click.echo("=" * 50)
+
+        app_svc = ApplicationService()
+        apps = app_svc.get_all_applications()
+
+        if not apps:
+            click.echo("❌ No applications found!")
+            return
+
+        click.echo("\n📋 Your applications:")
+        for a in apps[:20]:
+            click.echo(f"  {a.id}. Company ID {a.company_id}, Position ID {a.position_id}")
+
+        application_id = click.prompt("Enter application ID to delete", type=int)
+
+        # Confirm deletion
+        if not click.confirm(f"⚠️  Are you sure you want to delete application #{application_id}?", default=False):
+            click.echo("Deletion cancelled.")
+            return
+
+        svc = ApplicationService()
+        if svc.delete_application(application_id):
+            click.echo(f"\n✅ Application #{application_id} deleted successfully.")
+        else:
+            click.echo(f"\n❌ Application #{application_id} not found or could not be deleted.")
+    except Exception as e:
+        click.echo(f"\n❌ Error: {e}", err=True)
+
+
+@interactive.command("delete-company")
+def interactive_delete_company():
+    """Delete a company with confirmation."""
+    try:
+        click.echo("\n🗑️  Delete Company")
+        click.echo("=" * 50)
+
+        company_svc = CompanyService()
+        companies = company_svc.get_all_companies()
+
+        if not companies:
+            click.echo("❌ No companies found!")
+            return
+
+        click.echo("\n📋 Available companies:")
+        for c in companies:
+            click.echo(f"  {c.id}. {c.name} ({c.location or 'No location'})")
+
+        company_id = click.prompt("Enter company ID to delete", type=int)
+
+        # Confirm deletion
+        if not click.confirm(f"⚠️  Are you sure you want to delete company #{company_id}?", default=False):
+            click.echo("Deletion cancelled.")
+            return
+
+        svc = CompanyService()
+        if svc.delete_company(company_id):
+            click.echo(f"\n✅ Company #{company_id} deleted successfully.")
+        else:
+            click.echo(f"\n❌ Company #{company_id} not found or could not be deleted.")
+    except Exception as e:
+        click.echo(f"\n❌ Error: {e}", err=True)
+
+
+@interactive.command("delete-position")
+def interactive_delete_position():
+    """Delete a position with confirmation."""
+    try:
+        click.echo("\n🗑️  Delete Position")
+        click.echo("=" * 50)
+
+        position_svc = PositionService()
+        positions = position_svc.get_all_positions()
+
+        if not positions:
+            click.echo("❌ No positions found!")
+            return
+
+        click.echo("\n📋 Available positions:")
+        for p in positions:
+            click.echo(f"  {p.id}. {p.title} ({p.level})")
+
+        position_id = click.prompt("Enter position ID to delete", type=int)
+
+        # Confirm deletion
+        if not click.confirm(f"⚠️  Are you sure you want to delete position #{position_id}?", default=False):
+            click.echo("Deletion cancelled.")
+            return
+
+        svc = PositionService()
+        if svc.delete_position(position_id):
+            click.echo(f"\n✅ Position #{position_id} deleted successfully.")
+        else:
+            click.echo(f"\n❌ Position #{position_id} not found or could not be deleted.")
+    except Exception as e:
+        click.echo(f"\n❌ Error: {e}", err=True)
+
+
+@interactive.command("delete-recruiter")
+def interactive_delete_recruiter():
+    """Delete a recruiter with confirmation."""
+    try:
+        click.echo("\n🗑️  Delete Recruiter")
+        click.echo("=" * 50)
+
+        recruiter_svc = RecruiterService()
+        recruiters = recruiter_svc.get_all_recruiters()
+
+        if not recruiters:
+            click.echo("❌ No recruiters found!")
+            return
+
+        click.echo("\n👤 Available recruiters:")
+        for r in recruiters:
+            click.echo(f"  {r.id}. {r.name} ({r.email or 'No email'})")
+
+        recruiter_id = click.prompt("Enter recruiter ID to delete", type=int)
+
+        # Confirm deletion
+        if not click.confirm(f"⚠️  Are you sure you want to delete recruiter #{recruiter_id}?", default=False):
+            click.echo("Deletion cancelled.")
+            return
+
+        svc = RecruiterService()
+        if svc.delete_recruiter(recruiter_id):
+            click.echo(f"\n✅ Recruiter #{recruiter_id} deleted successfully.")
+        else:
+            click.echo(f"\n❌ Recruiter #{recruiter_id} not found or could not be deleted.")
     except Exception as e:
         click.echo(f"\n❌ Error: {e}", err=True)
 

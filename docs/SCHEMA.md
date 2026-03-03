@@ -48,6 +48,7 @@ erDiagram
         int company_id FK
         int position_id FK
         int recruiter_id FK
+        string job_id
         int current_status FK
         date applied_date
         string notes
@@ -100,12 +101,14 @@ Core table tracking job applications.
 - `company_id` - Foreign key to companies (required)
 - `position_id` - Foreign key to positions (required)
 - `recruiter_id` - Foreign key to recruiters (nullable)
+- `job_id` - External posting/job board ID (nullable, max 100 chars)
 - `current_status` - Foreign key to application_statuses (required)
 - `applied_date` - Date application was submitted (defaults to today)
 - `notes` - Additional notes (nullable)
 - `created_at`, `updated_at` - Timestamps
 
 **Constraints:**
+- `job_id` must be non-empty if provided
 - `applied_date` cannot be in the future
 - `applied_date` must be within last 365 days
 - Cannot delete referenced companies or positions (RESTRICT)
@@ -176,6 +179,7 @@ Performance indexes for common queries:
 - `applications.position_id` - Find all applications for a position
 - `applications.current_status` - Filter by status
 - `applications.applied_date` - Date range queries
+- `applications.job_id` - Lookup by external posting ID
 - `application_events.application_id` - Event timeline lookup
 - `application_events.event_date` - Temporal analysis
 

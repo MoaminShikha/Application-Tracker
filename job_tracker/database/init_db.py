@@ -140,6 +140,34 @@ class InitDB:
             logger.error("Failed to seed reference data")
             raise
 
+    def ensure_schema_compatibility(self):
+        """
+        Apply additive schema updates for existing databases.
+
+        This keeps old databases usable when new optional columns are introduced.
+        """
+        compatibility_sql = """
+            ALTER TABLE applications
+            ADD COLUMN IF NOT EXISTS job_id VARCHAR(100);
+
+            ALTER TABLE applications
+            DROP CONSTRAINT IF EXISTS applications_job_id_check;
+
+            ALTER TABLE applications
+            ADD CONSTRAINT applications_job_id_check
+            CHECK (job_id IS NULL OR job_id <> '');
+
+            CREATE INDEX IF NOT EXISTS idx_applications_job_id ON applications (job_id);
+        """
+
+        try:
+            with self._db as db:
+                db.execute_query(compatibility_sql, fetch=False)
+            logger.info("Schema compatibility checks completed")
+        except DatabaseError:
+            logger.error("Failed while applying schema compatibility updates")
+            raise
+
     def initialize_database(self):
         """
         Initialize the database schema.
@@ -156,6 +184,7 @@ class InitDB:
             else:
                 logger.info("Schema already exists; skipping initialization")
 
+            self.ensure_schema_compatibility()
             self.seed_reference_data()
             logger.info("Database initialization completed")
         except DatabaseError:

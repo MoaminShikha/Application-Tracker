@@ -44,12 +44,19 @@ def display_main_menu():
     click.echo("  10. Log a new event")
     click.echo("")
 
+    click.echo("🗑️  DELETE/MANAGE DATA")
+    click.echo("  12. Delete an application")
+    click.echo("  13. Delete a company")
+    click.echo("  14. Delete a position")
+    click.echo("  15. Delete a recruiter")
+    click.echo("")
+
     click.echo("❓ HELP & EXIT")
     click.echo("  11. Show help & tips")
     click.echo("  0. Exit")
     click.echo("")
 
-    choice = click.prompt("Enter your choice (0-11)", type=int, default=0)
+    choice = click.prompt("Enter your choice (0-15)", type=int, default=0)
     return choice
 
 
@@ -94,7 +101,7 @@ def display_applications_table():
         return
 
     # Build rich table with company/position names
-    headers = ["App ID", "Company", "Position", "Status", "Applied Date", "Days Active"]
+    headers = ["App ID", "Company", "Position", "Job ID", "Status", "Applied Date", "Days Active"]
     rows = []
 
     for a in apps:
@@ -117,6 +124,7 @@ def display_applications_table():
             a.id,
             company_name[:25],  # Truncate if too long
             position_title[:30],
+            a.job_id or "-",
             status_name,
             a.applied_date,
             f"{days_active} days"
@@ -310,6 +318,8 @@ def add_application_interactive():
     click.echo("STEP 3: Application Details")
     click.echo("-" * 70)
 
+    job_id = click.prompt("\nJob ID / Posting ID (optional, press Enter to skip)", default="", show_default=False)
+
     use_today = click.confirm("\nApplied today?", default=True)
     applied_date = None
     if not use_today:
@@ -361,6 +371,7 @@ def add_application_interactive():
             position_id=position_id,
             applied_date=applied_date,
             recruiter_id=recruiter_id,
+            job_id=job_id if job_id else None,
             notes=notes if notes else None
         )
         click.echo("✅ SUCCESS! Application created")
@@ -369,6 +380,8 @@ def add_application_interactive():
         click.echo(f"Company: {company_name}")
         click.echo(f"Position: {position_title} ({position_level})")
         click.echo(f"Status: Applied (automatically set)")
+        if app.job_id:
+            click.echo(f"Job ID: {app.job_id}")
         click.echo("Initial event logged automatically")
     except Exception as e:
         click.echo(f"\n❌ Error creating application: {e}")
@@ -588,6 +601,116 @@ def show_help():
     click.echo("  • See docs/ALL_INTERACTION_METHODS.md for workflows")
 
 
+def delete_application_interactive():
+    """Delete an application with confirmation."""
+    click.echo("\n" + "=" * 70)
+    click.echo("🗑️  Delete Application")
+    click.echo("=" * 70)
+
+    display_applications_table()
+
+    app_id = click.prompt("\nEnter application ID to delete", type=int)
+
+    # Confirm deletion
+    if not click.confirm(f"⚠️  Are you sure you want to delete application #{app_id}?", default=False):
+        click.echo("Deletion cancelled.")
+        return
+
+    try:
+        svc = ApplicationService()
+        if svc.delete_application(app_id):
+            click.echo(f"\n✅ Application #{app_id} deleted successfully.")
+        else:
+            click.echo(f"\n❌ Application #{app_id} not found or could not be deleted.")
+    except Exception as e:
+        click.echo(f"\n❌ Error: {e}")
+
+
+def delete_company_interactive():
+    """Delete a company with confirmation."""
+    click.echo("\n" + "=" * 70)
+    click.echo("🗑️  Delete Company")
+    click.echo("=" * 70)
+
+    display_companies_table()
+
+    company_id = click.prompt("\nEnter company ID to delete", type=int)
+
+    # Confirm deletion
+    if not click.confirm(f"⚠️  Are you sure you want to delete company #{company_id}?", default=False):
+        click.echo("Deletion cancelled.")
+        return
+
+    try:
+        svc = CompanyService()
+        if svc.delete_company(company_id):
+            click.echo(f"\n✅ Company #{company_id} deleted successfully.")
+        else:
+            click.echo(f"\n❌ Company #{company_id} not found or could not be deleted.")
+    except Exception as e:
+        click.echo(f"\n❌ Error: {e}")
+
+
+def delete_position_interactive():
+    """Delete a position with confirmation."""
+    click.echo("\n" + "=" * 70)
+    click.echo("🗑️  Delete Position")
+    click.echo("=" * 70)
+
+    position_svc = PositionService()
+    positions = position_svc.get_all_positions()
+
+    if not positions:
+        click.echo("\n❌ No positions found!")
+        return
+
+    click.echo("\n📋 Available positions:")
+    for p in positions:
+        click.echo(f"  {p.id}. {p.title} ({p.level})")
+
+    position_id = click.prompt("\nEnter position ID to delete", type=int)
+
+    # Confirm deletion
+    if not click.confirm(f"⚠️  Are you sure you want to delete position #{position_id}?", default=False):
+        click.echo("Deletion cancelled.")
+        return
+
+    try:
+        svc = PositionService()
+        if svc.delete_position(position_id):
+            click.echo(f"\n✅ Position #{position_id} deleted successfully.")
+        else:
+            click.echo(f"\n❌ Position #{position_id} not found or could not be deleted.")
+    except Exception as e:
+        click.echo(f"\n❌ Error: {e}")
+
+
+def delete_recruiter_interactive():
+    """Delete a recruiter with confirmation."""
+    click.echo("\n" + "=" * 70)
+    click.echo("🗑️  Delete Recruiter")
+    click.echo("=" * 70)
+
+    display_recruiters_table()
+
+    recruiter_id = click.prompt("\nEnter recruiter ID to delete", type=int)
+
+    # Confirm deletion
+    if not click.confirm(f"⚠️  Are you sure you want to delete recruiter #{recruiter_id}?", default=False):
+        click.echo("Deletion cancelled.")
+        return
+
+    try:
+        svc = RecruiterService()
+        if svc.delete_recruiter(recruiter_id):
+            click.echo(f"\n✅ Recruiter #{recruiter_id} deleted successfully.")
+        else:
+            click.echo(f"\n❌ Recruiter #{recruiter_id} not found or could not be deleted.")
+    except Exception as e:
+        click.echo(f"\n❌ Error: {e}")
+
+
+
 @click.command()
 def menu():
     """Launch interactive menu-driven interface."""
@@ -627,6 +750,14 @@ def menu():
             log_event_interactive()
         elif choice == 11:
             show_help()
+        elif choice == 12:
+            delete_application_interactive()
+        elif choice == 13:
+            delete_company_interactive()
+        elif choice == 14:
+            delete_position_interactive()
+        elif choice == 15:
+            delete_recruiter_interactive()
         else:
             click.echo("\n❌ Invalid choice. Please try again.")
 

@@ -18,6 +18,7 @@ class Application(BaseModel):
         company_id: Foreign key to company (required)
         position_id: Foreign key to position (required)
         recruiter_id: Foreign key to recruiter (optional)
+        job_id: External posting/job board ID (optional, max 100 chars)
         current_status: Foreign key to application_status (required)
         applied_date: Date application was submitted (required, not in future, within 365 days)
         notes: Additional notes (optional, max 255 chars)
@@ -29,6 +30,7 @@ class Application(BaseModel):
     company_id: int = 0
     position_id: int = 0
     recruiter_id: Optional[int] = None
+    job_id: Optional[str] = None
     current_status: int = 0
     applied_date: Optional[date] = None
     notes: Optional[str] = None
@@ -43,6 +45,7 @@ class Application(BaseModel):
         - company_id: Required, must be positive
         - position_id: Required, must be positive
         - current_status: Required, must be positive
+        - job_id: Optional, non-empty if provided, max 100 chars
         - applied_date: Required, not in future, within last 365 days
         - notes: Max 255 chars if provided
 
@@ -57,6 +60,13 @@ class Application(BaseModel):
 
         if self.current_status <= 0:
             raise ValidationError("Status is required and must be positive")
+
+        if self.job_id is not None:
+            self.job_id = self.job_id.strip()
+            if not self.job_id:
+                raise ValidationError("Job ID cannot be empty when provided")
+            if len(self.job_id) > 100:
+                raise ValidationError("Job ID cannot exceed 100 characters")
 
         if self.applied_date is None:
             raise ValidationError("Applied date is required")
@@ -90,6 +100,7 @@ class Application(BaseModel):
             'company_id': self.company_id,
             'position_id': self.position_id,
             'recruiter_id': self.recruiter_id,
+            'job_id': self.job_id,
             'current_status': self.current_status,
             'applied_date': self.applied_date,
             'notes': self.notes,

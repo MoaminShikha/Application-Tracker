@@ -19,6 +19,7 @@ This application follows a **layered architecture** pattern, separating concerns
 - Chose **Click** over argparse for better composability and cleaner syntax
 - Implemented both menu and command modes to accommodate different user preferences
 - Used **tabulate** for table formatting to improve readability over raw text output
+- Added optional `job_id` capture in both guided and direct command flows for external posting references
 
 ### 2. Service Layer (`job_tracker/services/`)
 
@@ -35,6 +36,7 @@ This application follows a **layered architecture** pattern, separating concerns
 - State machine pattern enforces valid status transitions
 - Services compose multiple database operations atomically
 - No business logic leaks into CLI or database layers
+- `ApplicationService` treats `job_id` as optional but validates/sanitizes when provided
 
 **Status Transition Matrix**:
 ```
@@ -64,6 +66,7 @@ Accepted, Rejected, Withdrawn → {terminal states}
 - Email: Regex pattern matching
 - Dates: Not in future, within 365-day window
 - Required fields: Explicit checks with descriptive errors
+- Optional IDs: `job_id` allows NULL, but rejects empty strings when present
 
 ### 4. Database Layer (`job_tracker/database/`)
 
@@ -95,6 +98,7 @@ Accepted, Rejected, Withdrawn → {terminal states}
 - Read-only operations (no writes)
 - Aggregations done in SQL for performance
 - Lightweight export formats for portability
+- Recent application exports include `job_id` for reconciliation with external systems
 
 ## Data Flow
 
@@ -107,7 +111,7 @@ Accepted, Rejected, Withdrawn → {terminal states}
    ↓ validates business rules
    ↓ starts transaction
 3. Model (application.py)
-   ↓ validates data
+   ↓ validates data (`job_id` optional + sanitized)
 4. Database (query_executor.py)
    ↓ executes INSERT
    ↓ logs event

@@ -123,12 +123,14 @@ def build_cli() -> click.Group:
     @click.option("--position-id", required=True, type=int, help="Position ID (from add-position output)")
     @click.option("--applied-date", default=None, type=str, help="Applied date YYYY-MM-DD (default: today)")
     @click.option("--recruiter-id", default=None, type=int, help="Recruiter ID (optional)")
+    @click.option("--job-id", default=None, type=str, help="External job posting ID/reference (optional)")
     @click.option("--notes", default=None, type=str, help="Application notes")
     def add_application(
         company_id: int,
         position_id: int,
         applied_date: Optional[str],
         recruiter_id: Optional[int],
+        job_id: Optional[str],
         notes: Optional[str],
     ) -> None:
         """Create a new job application record."""
@@ -139,11 +141,14 @@ def build_cli() -> click.Group:
                 position_id=position_id,
                 applied_date=_parse_date(applied_date),
                 recruiter_id=recruiter_id,
+                job_id=job_id,
                 notes=notes,
             )
             click.echo(f"✅ Created application #{app.id}")
             click.echo(f"   🏢 Company ID: {app.company_id}")
             click.echo(f"   💼 Position ID: {app.position_id}")
+            if app.job_id:
+                click.echo(f"   🆔 Job ID: {app.job_id}")
             click.echo(f"   📅 Applied: {app.applied_date}")
             click.echo(f"   ℹ️  Initial status set to 'Applied' and event logged automatically")
         except Exception as e:
@@ -161,9 +166,13 @@ def build_cli() -> click.Group:
                 click.echo("📭 No applications found. Add one with: add-application")
                 return
             click.echo(f"\n📝 Applications ({len(apps)} total):")
-            click.echo("=" * 80)
+            click.echo("=" * 110)
             for a in apps:
-                click.echo(f"  ID {a.id:3d} | Company {a.company_id:3d} | Position {a.position_id:3d} | Status {a.current_status} | {a.applied_date}")
+                job_id_display = a.job_id if a.job_id else "-"
+                click.echo(
+                    f"  ID {a.id:3d} | Company {a.company_id:3d} | Position {a.position_id:3d} | "
+                    f"Job ID {job_id_display:15s} | Status {a.current_status} | {a.applied_date}"
+                )
         except Exception as e:
             click.echo(f"❌ Error: {e}", err=True)
 
