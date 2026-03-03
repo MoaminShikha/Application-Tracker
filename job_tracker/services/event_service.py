@@ -20,23 +20,30 @@ class EventService(BaseService):
         event = ApplicationEvent(
             application_id=application_id,
             event_type=event_type,
-            event_date=event_date or datetime.now(),
+            event_date=event_date or datetime.now(),  # For validation only
             notes=notes,
         )
         event.validate()
 
-        query = """
-            INSERT INTO application_events (application_id, event_type, event_date, notes)
-            VALUES (%s, %s, %s, %s)
-            RETURNING id, application_id, event_type, event_date, notes, created_at
-        """
+        # If event_date is provided, use it; otherwise let DB use NOW()
+        if event_date is not None:
+            query = """
+                INSERT INTO application_events (application_id, event_type, event_date, notes)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id, application_id, event_type, event_date, notes, created_at
+            """
+            params = (application_id, event_type, event_date, notes)
+        else:
+            query = """
+                INSERT INTO application_events (application_id, event_type, notes)
+                VALUES (%s, %s, %s)
+                RETURNING id, application_id, event_type, event_date, notes, created_at
+            """
+            params = (application_id, event_type, notes)
 
         with self._executor() as (db, executor):
             try:
-                row = executor.execute_insert_returning(
-                    query,
-                    (event.application_id, event.event_type, event.event_date, event.notes),
-                )
+                row = executor.execute_insert_returning(query, params)
                 db.connection.commit()
                 return ApplicationEvent.from_dict(row)
             except Exception:

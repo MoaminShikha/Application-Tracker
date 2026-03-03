@@ -1,6 +1,6 @@
-"""CRUD and status transition service for applications."""
+"""Application management service with status validation."""
 
-from datetime import date, datetime
+from datetime import date
 from typing import List, Optional
 
 from job_tracker.models.application import Application
@@ -40,8 +40,8 @@ class ApplicationService(BaseService):
         """
 
         insert_event_query = """
-            INSERT INTO application_events (application_id, event_type, event_date, notes)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO application_events (application_id, event_type, notes)
+            VALUES (%s, %s, %s)
         """
 
         with self._executor() as (db, executor):
@@ -62,7 +62,6 @@ class ApplicationService(BaseService):
                     (
                         row["id"],
                         "Applied",
-                        datetime.now(),
                         "Application created",
                     ),
                 )
@@ -116,8 +115,8 @@ class ApplicationService(BaseService):
         """
 
         insert_event_query = """
-            INSERT INTO application_events (application_id, event_type, event_date, notes)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO application_events (application_id, event_type, notes)
+            VALUES (%s, %s, %s)
         """
 
         with self._executor() as (db, executor):
@@ -128,7 +127,7 @@ class ApplicationService(BaseService):
                     return None
                 executor.execute_update(
                     insert_event_query,
-                    (application_id, f"Status changed to {new_name}", datetime.now(), None),
+                    (application_id, f"Status changed to {new_name}", None),
                 )
                 db.connection.commit()
                 return Application.from_dict(row)
