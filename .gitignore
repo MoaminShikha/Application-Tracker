@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environment variables (IMPORTANT - never commit this!)
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Transformation documentation (delete these before publishing)
+REFACTORING_PLAN.md
+TRANSFORMATION_SUMMARY.md
+PRE_PUBLISH_CHECKLIST.md
+PROJECT_STATUS.md
+FINAL_SUMMARY.md
+QUICK_START.md
+CHECKLIST.md
+scripts/cleanup.py
+
+
