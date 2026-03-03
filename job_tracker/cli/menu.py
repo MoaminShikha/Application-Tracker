@@ -101,7 +101,7 @@ def display_applications_table():
         return
 
     # Build rich table with company/position names
-    headers = ["App ID", "Company", "Position", "Job ID", "Status", "Applied Date", "Days Active"]
+    headers = ["App ID", "Company", "Position", "Job ID", "Status", "Applied Date", "Days Active", "Notes"]
     rows = []
 
     for a in apps:
@@ -119,6 +119,7 @@ def display_applications_table():
 
         # Calculate days since application
         days_active = a.days_in_current_status()
+        notes_preview = a.notes[:40] + "..." if a.notes and len(a.notes) > 40 else (a.notes or "-")
 
         rows.append([
             a.id,
@@ -127,7 +128,8 @@ def display_applications_table():
             a.job_id or "-",
             status_name,
             a.applied_date,
-            f"{days_active} days"
+            f"{days_active} days",
+            notes_preview,
         ])
 
     click.echo(f"\n📝 Applications ({len(apps)} total):")

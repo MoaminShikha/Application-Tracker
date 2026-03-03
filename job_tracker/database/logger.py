@@ -47,9 +47,9 @@ class DatabaseLogger:
             )
             file_handler.setFormatter(file_formatter)
 
-            # Console handler - important events only (INFO and above)
+            # Console handler - only errors and warnings (WARNING and above)
             console_handler = logging.StreamHandler()
-            console_handler.setLevel(logging.INFO)
+            console_handler.setLevel(logging.WARNING)
             console_formatter = logging.Formatter(
                 '%(levelname)s: %(message)s'
             )

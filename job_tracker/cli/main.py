@@ -7,6 +7,7 @@ from typing import Optional
 import click
 
 from job_tracker.analytics import AnalyticsService, build_dashboard_rows, to_csv_report, to_json_report
+from job_tracker.database.init_db import InitDB
 from job_tracker.services import (
     ApplicationService,
     CompanyService,
@@ -20,20 +21,25 @@ from job_tracker.services import (
 from job_tracker.cli.interactive import interactive as interactive_mode
 from job_tracker.cli.menu import menu as menu_mode
 
-# ...existing code...
+
+def _ensure_database_ready() -> None:
+    """Ensure schema and additive migrations are applied before running CLI commands."""
+    InitDB().initialize_database()
+
 
 def build_cli() -> click.Group:
     @click.group(help="Application Tracker CLI - Track your job search pipeline\n\n💡 TIP: Run 'python -m job_tracker.cli menu' for guided menu interface!")
     def cli() -> None:
-        pass
+        try:
+            _ensure_database_ready()
+        except Exception as e:
+            raise click.ClickException(f"Database initialization failed: {e}")
 
     # Add menu mode as primary entry point
     cli.add_command(menu_mode, name="menu")
 
     # Add interactive mode as a subcommand
     cli.add_command(interactive_mode, name="interactive")
-
-    # ...existing code...
 
     @cli.command("add-company")
     @click.option("--name", required=True, type=str, help="Company name (unique)")
