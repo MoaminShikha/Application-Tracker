@@ -12,6 +12,7 @@ from job_tracker.services import (
     StatusService,
 )
 from job_tracker.analytics import AnalyticsService
+from job_tracker.utils.colors import colorize_status
 
 
 def display_main_menu():
@@ -117,6 +118,9 @@ def display_applications_table():
         status = status_svc.get_status(a.current_status)
         status_name = status.status_name if status else f"ID {a.current_status}"
 
+        # Colorize status for better visual feedback
+        colored_status = colorize_status(status_name) if status else status_name
+
         # Calculate days since application
         days_active = a.days_in_current_status()
         notes_preview = a.notes[:40] + "..." if a.notes and len(a.notes) > 40 else (a.notes or "-")
@@ -126,7 +130,7 @@ def display_applications_table():
             company_name[:25],  # Truncate if too long
             position_title[:30],
             a.job_id or "-",
-            status_name,
+            colored_status,
             a.applied_date,
             f"{days_active} days",
             notes_preview,
@@ -409,7 +413,7 @@ def update_status_interactive():
 
     status_svc = StatusService()
     current_status = status_svc.get_status(app.current_status)
-    click.echo(f"\n📍 Current status: {current_status.status_name}")
+    click.echo(f"\n📍 Current status: {colorize_status(current_status.status_name)}")
 
     # Show valid transitions
     from job_tracker.services.status_service import ALLOWED_TRANSITIONS
@@ -422,7 +426,7 @@ def update_status_interactive():
     click.echo("\n✅ Valid next statuses:")
     allowed_list = sorted(allowed)
     for idx, status_name in enumerate(allowed_list, 1):
-        click.echo(f"  {idx}. {status_name}")
+        click.echo(f"  {idx}. {colorize_status(status_name)}")
 
     choice = click.prompt(f"Choose new status (1-{len(allowed_list)})", type=click.IntRange(1, len(allowed_list)))
     new_status_name = allowed_list[choice - 1]
@@ -430,7 +434,7 @@ def update_status_interactive():
 
     try:
         updated = app_svc.update_application_status(app_id, new_status_id)
-        click.echo(f"\n✅ Success! Updated application #{updated.id} to '{new_status_name}'")
+        click.echo(f"\n✅ Success! Updated application #{updated.id} to '{colorize_status(new_status_name)}'")
         click.echo("   ℹ️  Event logged automatically")
     except Exception as e:
         click.echo(f"\n❌ Error: {e}")

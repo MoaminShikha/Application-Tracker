@@ -12,6 +12,7 @@ from job_tracker.services import (
     StatusService,
 )
 from job_tracker.models import VALID_LEVELS
+from job_tracker.utils.colors import colorize_status
 
 
 def prompt_company_details():
@@ -165,7 +166,10 @@ def prompt_status_update():
 
     click.echo("\n📋 Your applications:")
     for a in apps[:10]:  # Show first 10
-        click.echo(f"  {a.id}. Company ID {a.company_id}, Position ID {a.position_id}, Status {a.current_status}")
+        status_svc_temp = StatusService()
+        status_obj = status_svc_temp.get_status(a.current_status)
+        status_display = colorize_status(status_obj.status_name) if status_obj else a.current_status
+        click.echo(f"  {a.id}. Company ID {a.company_id}, Position ID {a.position_id}, Status {status_display}")
 
     application_id = click.prompt("Select application ID to update", type=int)
 
@@ -178,7 +182,7 @@ def prompt_status_update():
     status_svc = StatusService()
     current_status = status_svc.get_status(app.current_status)
 
-    click.echo(f"\n📍 Current status: {current_status.status_name}")
+    click.echo(f"\n📍 Current status: {colorize_status(current_status.status_name)}")
 
     # Show valid transitions
     from job_tracker.services.status_service import ALLOWED_TRANSITIONS
@@ -186,13 +190,13 @@ def prompt_status_update():
     allowed = ALLOWED_TRANSITIONS.get(current_name, set())
 
     if not allowed:
-        click.echo(f"⚠️  This application is in a terminal state ({current_name}). No further updates allowed.")
+        click.echo(f"⚠️  This application is in a terminal state ({colorize_status(current_name)}). No further updates allowed.")
         raise click.Abort()
 
     click.echo(f"\n✅ Valid next statuses:")
     allowed_list = sorted(allowed)
     for idx, status_name in enumerate(allowed_list, 1):
-        click.echo(f"  {idx}. {status_name}")
+        click.echo(f"  {idx}. {colorize_status(status_name)}")
 
     choice = click.prompt("Choose new status (1-{})".format(len(allowed_list)), type=click.IntRange(1, len(allowed_list)))
     new_status_name = allowed_list[choice - 1]

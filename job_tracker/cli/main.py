@@ -16,6 +16,7 @@ from job_tracker.services import (
     RecruiterService,
     StatusService,
 )
+from job_tracker.utils.colors import colorize_status
 
 # Import interactive mode and menu
 from job_tracker.cli.interactive import interactive as interactive_mode
@@ -167,6 +168,7 @@ def build_cli() -> click.Group:
         """View all your job applications."""
         try:
             svc = ApplicationService()
+            status_svc = StatusService()
             apps = svc.get_all_applications()
             if not apps:
                 click.echo("📭 No applications found. Add one with: add-application")
@@ -175,9 +177,12 @@ def build_cli() -> click.Group:
             click.echo("=" * 110)
             for a in apps:
                 job_id_display = a.job_id if a.job_id else "-"
+                # Get status name and colorize it
+                status = status_svc.get_status(a.current_status)
+                status_display = colorize_status(status.status_name) if status else str(a.current_status)
                 click.echo(
                     f"  ID {a.id:3d} | Company {a.company_id:3d} | Position {a.position_id:3d} | "
-                    f"Job ID {job_id_display:15s} | Status {a.current_status} | {a.applied_date}"
+                    f"Job ID {job_id_display:15s} | Status {status_display} | {a.applied_date}"
                 )
         except Exception as e:
             click.echo(f"❌ Error: {e}", err=True)
@@ -203,7 +208,7 @@ def build_cli() -> click.Group:
                 raise click.Abort()
 
             status_name = status_svc.get_status(updated.current_status).status_name
-            click.echo(f"✅ Updated application #{updated.id} to '{status_name}'")
+            click.echo(f"✅ Updated application #{updated.id} to {colorize_status(status_name)}")
             click.echo(f"   ℹ️  Event logged automatically")
         except ValueError as e:
             click.echo(f"❌ Invalid transition: {e}", err=True)

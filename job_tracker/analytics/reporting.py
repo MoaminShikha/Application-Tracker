@@ -5,6 +5,8 @@ import json
 from io import StringIO
 from typing import Any, Dict, Iterable, List
 
+from job_tracker.utils.colors import colorize_status
+
 
 def build_dashboard_rows(
     overview: Dict[str, Any],
@@ -26,7 +28,10 @@ def build_dashboard_rows(
         "Status distribution:",
     ]
     for item in distribution:
-        rows.append(f"- {item.get('status_name', 'Unknown')}: {item.get('count', 0)}")
+        status_name = item.get('status_name', 'Unknown')
+        count = item.get('count', 0)
+        colored_status = colorize_status(status_name)
+        rows.append(f"- {colored_status}: {count}")
     return rows
 
 
