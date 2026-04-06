@@ -5,7 +5,21 @@ from typing import List, Optional
 
 from job_tracker.models.application import Application
 from job_tracker.services.base_service import BaseService
+from job_tracker.services.query_options import ApplicationQueryOptions
 from job_tracker.services.status_service import ALLOWED_TRANSITIONS
+
+
+_GET_APPLICATION_SQL = """
+    SELECT id, company_id, position_id, recruiter_id, job_id,
+           current_status, applied_date, notes, created_at, updated_at
+    FROM applications
+    WHERE id = %s
+"""
+
+_INSERT_EVENT_SQL = """
+    INSERT INTO application_events (application_id, event_type, notes)
+    VALUES (%s, %s, %s)
+"""
 
 
 class ApplicationService(BaseService):
@@ -20,123 +34,120 @@ class ApplicationService(BaseService):
         job_id: Optional[str] = None,
         notes: Optional[str] = None,
     ) -> Application:
-        status_id = self._get_status_id_by_name("Applied")
-        if status_id is None:
-            raise ValueError("Required status 'Applied' is missing from application_statuses")
+        with self._transaction() as executor:
+            status_row = executor.execute_query_single(
+                "SELECT id FROM application_statuses WHERE status_name = 'Applied'"
+            )
+            if not status_row:
+                raise ValueError("Required status 'Applied' is missing from application_statuses")
 
-        application = Application(
-            company_id=company_id,
-            position_id=position_id,
-            recruiter_id=recruiter_id,
-            job_id=job_id,
-            current_status=status_id,
-            applied_date=applied_date or date.today(),
-            notes=notes,
-        )
-        application.validate()
+            application = Application(
+                company_id=company_id,
+                position_id=position_id,
+                recruiter_id=recruiter_id,
+                job_id=job_id,
+                current_status=status_row["id"],
+                applied_date=applied_date or date.today(),
+                notes=notes,
+            )
+            application.validate()
 
-        insert_app_query = """
-            INSERT INTO applications (company_id, position_id, recruiter_id, job_id, current_status, applied_date, notes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            RETURNING id, company_id, position_id, recruiter_id, job_id, current_status, applied_date, notes, created_at, updated_at
-        """
-
-        insert_event_query = """
-            INSERT INTO application_events (application_id, event_type, notes)
-            VALUES (%s, %s, %s)
-        """
-
-        with self._executor() as (db, executor):
-            try:
-                row = executor.execute_insert_returning(
-                    insert_app_query,
-                    (
-                        application.company_id,
-                        application.position_id,
-                        application.recruiter_id,
-                        application.job_id,
-                        application.current_status,
-                        application.applied_date,
-                        application.notes,
-                    ),
-                )
-                executor.execute_update(
-                    insert_event_query,
-                    (
-                        row["id"],
-                        "Applied",
-                        "Application created",
-                    ),
-                )
-                db.connection.commit()
-                return Application.from_dict(row)
-            except Exception:
-                db.connection.rollback()
-                raise
+            row = executor.execute_insert_returning(
+                """
+                INSERT INTO applications
+                    (company_id, position_id, recruiter_id, job_id, current_status, applied_date, notes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id, company_id, position_id, recruiter_id, job_id,
+                          current_status, applied_date, notes, created_at, updated_at
+                """,
+                (
+                    application.company_id,
+                    application.position_id,
+                    application.recruiter_id,
+                    application.job_id,
+                    application.current_status,
+                    application.applied_date,
+                    application.notes,
+                ),
+            )
+            executor.execute_update(_INSERT_EVENT_SQL, (row["id"], "Applied", "Application created"))
+            return Application.from_dict(row)
 
     def get_application(self, application_id: int) -> Optional[Application]:
-        query = """
-            SELECT id, company_id, position_id, recruiter_id, job_id, current_status, applied_date, notes, created_at, updated_at
-            FROM applications
-            WHERE id = %s
-        """
-
-        with self._executor() as (_, executor):
-            row = executor.execute_query_single(query, (application_id,))
+        with self._executor() as executor:
+            row = executor.execute_query_single(_GET_APPLICATION_SQL, (application_id,))
             return Application.from_dict(row) if row else None
 
-    def get_all_applications(self) -> List[Application]:
-        query = """
-            SELECT id, company_id, position_id, recruiter_id, job_id, current_status, applied_date, notes, created_at, updated_at
+    def get_all_applications(self, options: Optional[ApplicationQueryOptions] = None) -> List[Application]:
+        options = options or ApplicationQueryOptions(sort_by="created_at", sort_dir="desc")
+        sort_columns = {"id", "created_at", "updated_at", "applied_date", "current_status"}
+        sort_by = options.sort_by if options.sort_by in sort_columns else "created_at"
+        sort_dir = "ASC" if str(options.sort_dir).lower() == "asc" else "DESC"
+
+        query = f"""
+            SELECT id, company_id, position_id, recruiter_id, job_id,
+                   current_status, applied_date, notes, created_at, updated_at
             FROM applications
-            ORDER BY created_at DESC
+            WHERE (%s IS NULL OR company_id = %s)
+              AND (%s IS NULL OR current_status = %s)
+            ORDER BY {sort_by} {sort_dir}
         """
 
-        with self._executor() as (_, executor):
-            rows = executor.execute_query(query)
+        params = [options.company_id, options.company_id, options.status_id, options.status_id]
+        if options.limit is not None:
+            query += "\n LIMIT %s"
+            params.append(options.limit)
+        if options.offset is not None:
+            query += "\n OFFSET %s"
+            params.append(options.offset)
+
+        with self._executor() as executor:
+            rows = executor.execute_query(query, tuple(params))
             return [Application.from_dict(row) for row in rows]
 
     def update_application_status(self, application_id: int, new_status: int) -> Optional[Application]:
-        current_app = self.get_application(application_id)
-        if not current_app:
-            return None
+        with self._transaction() as executor:
+            # Resolve current status — single round trip
+            app_row = executor.execute_query_single(
+                "SELECT current_status FROM applications WHERE id = %s",
+                (application_id,),
+            )
+            if not app_row:
+                return None
 
-        current_name = self._get_status_name_by_id(current_app.current_status)
-        new_name = self._get_status_name_by_id(new_status)
-        if current_name is None or new_name is None:
-            raise ValueError("Current or new status does not exist")
+            # Resolve both status names in one query
+            status_rows = executor.execute_query(
+                "SELECT id, status_name FROM application_statuses WHERE id = ANY(%s)",
+                ([app_row["current_status"], new_status],),
+            )
+            statuses = {r["id"]: r["status_name"] for r in status_rows}
 
-        allowed = ALLOWED_TRANSITIONS.get(current_name, set())
-        if new_name not in allowed:
-            raise ValueError(f"Invalid transition: {current_name} -> {new_name}")
+            current_name = statuses.get(app_row["current_status"])
+            new_name = statuses.get(new_status)
+            if not current_name or not new_name:
+                raise ValueError("Current or new status does not exist")
 
-        update_query = """
-            UPDATE applications
-            SET current_status = %s, updated_at = NOW()
-            WHERE id = %s
-            RETURNING id, company_id, position_id, recruiter_id, job_id, current_status, applied_date, notes, created_at, updated_at
-        """
+            if new_name not in ALLOWED_TRANSITIONS.get(current_name, set()):
+                raise ValueError(f"Invalid transition: {current_name} -> {new_name}")
 
-        insert_event_query = """
-            INSERT INTO application_events (application_id, event_type, notes)
-            VALUES (%s, %s, %s)
-        """
+            row = executor.execute_query_single(
+                """
+                UPDATE applications
+                SET current_status = %s, updated_at = NOW()
+                WHERE id = %s
+                RETURNING id, company_id, position_id, recruiter_id, job_id,
+                          current_status, applied_date, notes, created_at, updated_at
+                """,
+                (new_status, application_id),
+            )
+            if not row:
+                return None
 
-        with self._executor() as (db, executor):
-            try:
-                row = executor.execute_query_single(update_query, (new_status, application_id))
-                if not row:
-                    db.connection.rollback()
-                    return None
-                executor.execute_update(
-                    insert_event_query,
-                    (application_id, f"Status changed to {new_name}", None),
-                )
-                db.connection.commit()
-                return Application.from_dict(row)
-            except Exception:
-                db.connection.rollback()
-                raise
+            executor.execute_update(
+                _INSERT_EVENT_SQL,
+                (application_id, f"Status changed to {new_name}", None),
+            )
+            return Application.from_dict(row)
 
     def update_application(self, application_id: int, **fields) -> Optional[Application]:
         allowed_fields = {"company_id", "position_id", "recruiter_id", "job_id", "applied_date", "notes"}
@@ -144,57 +155,34 @@ class ApplicationService(BaseService):
         if not updates:
             raise ValueError("No valid fields provided for update")
 
-        set_clauses = []
-        params = []
-        for field, value in updates.items():
-            set_clauses.append(f"{field} = %s")
-            params.append(value)
-
+        set_clauses = [f"{field} = %s" for field in updates]
         set_clauses.append("updated_at = NOW()")
-        params.append(application_id)
+        params = list(updates.values()) + [application_id]
 
         query = f"""
             UPDATE applications
             SET {', '.join(set_clauses)}
             WHERE id = %s
-            RETURNING id, company_id, position_id, recruiter_id, job_id, current_status, applied_date, notes, created_at, updated_at
+            RETURNING id, company_id, position_id, recruiter_id, job_id,
+                      current_status, applied_date, notes, created_at, updated_at
         """
 
-        with self._executor() as (db, executor):
-            try:
-                row = executor.execute_query_single(query, tuple(params))
-                if not row:
-                    db.connection.rollback()
-                    return None
-                updated = Application.from_dict(row)
-                updated.validate()
-                db.connection.commit()
-                return updated
-            except Exception:
-                db.connection.rollback()
-                raise
+        with self._transaction() as executor:
+            # Read current state, merge proposed updates, validate before writing
+            current = executor.execute_query_single(_GET_APPLICATION_SQL, (application_id,))
+            if not current:
+                return None
+
+            merged = {**current, **updates}
+            Application.from_dict(merged)  # raises ValidationError if the merged state is invalid
+
+            row = executor.execute_query_single(query, tuple(params))
+            return Application.from_dict(row) if row else None
 
     def delete_application(self, application_id: int) -> bool:
-        query = "DELETE FROM applications WHERE id = %s"
-
-        with self._executor() as (db, executor):
-            try:
-                affected = executor.execute_update(query, (application_id,))
-                db.connection.commit()
-                return affected > 0
-            except Exception:
-                db.connection.rollback()
-                raise
-
-    def _get_status_id_by_name(self, status_name: str) -> Optional[int]:
-        query = "SELECT id FROM application_statuses WHERE status_name = %s"
-        with self._executor() as (_, executor):
-            row = executor.execute_query_single(query, (status_name,))
-            return row["id"] if row else None
-
-    def _get_status_name_by_id(self, status_id: int) -> Optional[str]:
-        query = "SELECT status_name FROM application_statuses WHERE id = %s"
-        with self._executor() as (_, executor):
-            row = executor.execute_query_single(query, (status_id,))
-            return row["status_name"] if row else None
-
+        with self._transaction() as executor:
+            affected = executor.execute_update(
+                "DELETE FROM applications WHERE id = %s",
+                (application_id,),
+            )
+            return affected > 0

@@ -4,7 +4,7 @@ Base Model - Abstract base class for all domain models.
 Provides common functionality for serialization, validation, and representation.
 """
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from dataclasses import asdict
 from typing import Any, Dict
 
@@ -19,21 +19,19 @@ class BaseModel(ABC):
     Abstract base class for all domain models.
 
     Provides common methods:
-    - validate() - Validate model data
+    - validate() - Validate model data (must be implemented by subclasses)
     - to_dict() - Serialize to dictionary
     - from_dict() - Deserialize from dictionary
     - __repr__() - String representation
     - __eq__() - Equality comparison
     """
 
+    @abstractmethod
     def validate(self) -> None:
         """
-        Validate the model.
-
-        Override in subclasses to implement specific validation rules.
-        Should raise ValidationError if validation fails.
+        Validate the model. Raise ValidationError if data is invalid.
+        Must be implemented by every subclass.
         """
-        pass
 
     def to_dict(self) -> Dict[str, Any]:
         """

@@ -7,22 +7,6 @@ from typing import Optional
 from datetime import datetime
 from job_tracker.models.base import BaseModel, ValidationError
 
-# Valid event types
-VALID_EVENT_TYPES = {
-    "Applied",
-    "Interview Scheduled",
-    "Interviewed",
-    "Interview Failed",
-    "Offer Received",
-    "Offer Accepted",
-    "Offer Rejected",
-    "Rejected",
-    "Withdrawn",
-    "Feedback Received",
-    "Status Update"
-}
-
-
 @dataclass
 class ApplicationEvent(BaseModel):
     """
@@ -84,42 +68,4 @@ class ApplicationEvent(BaseModel):
         if self.notes and len(self.notes) > 255:
             raise ValidationError("Notes cannot exceed 255 characters")
 
-    def to_dict(self) -> dict:
-        """
-        Serialize event to dictionary.
-
-        Returns:
-            Dictionary representation
-        """
-        return {
-            'id': self.id,
-            'application_id': self.application_id,
-            'event_type': self.event_type,
-            'event_date': self.event_date,
-            'notes': self.notes,
-            'created_at': self.created_at
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> 'ApplicationEvent':
-        """
-        Deserialize event from dictionary.
-
-        Args:
-            data: Dictionary with event data
-
-        Returns:
-            ApplicationEvent instance
-
-        Raises:
-            ValidationError: If validation fails
-        """
-        try:
-            instance = cls(**data)
-            instance.validate()
-            return instance
-        except TypeError as e:
-            raise ValidationError(f"Invalid data for ApplicationEvent: {e}")
-        except ValidationError:
-            raise
 

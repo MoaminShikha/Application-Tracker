@@ -8,8 +8,8 @@ from job_tracker.models.company import Company
 from job_tracker.models.position import Position, VALID_LEVELS
 from job_tracker.models.recruiter import Recruiter
 from job_tracker.models.application import Application
-from job_tracker.models.application_event import ApplicationEvent, VALID_EVENT_TYPES
-from job_tracker.models.application_status import ApplicationStatus, VALID_STATUSES
+from job_tracker.models.application_event import ApplicationEvent
+from job_tracker.models.application_status import ApplicationStatus, VALID_STATUSES, STATUS_MACHINE
 
 __all__ = [
     "BaseModel",
@@ -20,7 +20,7 @@ __all__ = [
     "Recruiter",
     "Application",
     "ApplicationEvent",
-    "VALID_EVENT_TYPES",
     "ApplicationStatus",
     "VALID_STATUSES",
+    "STATUS_MACHINE",
 ]

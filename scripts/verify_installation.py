@@ -61,12 +61,12 @@ def check_database_connection():
         sys.path.insert(0, str(project_root))
 
         from job_tracker.database.connection import DatabaseConnection
-        from job_tracker.utils.config import get_connection_string
+        from job_tracker.utils.config import Config
 
-        conn_string = get_connection_string()
+        conn_string = Config().get_connection_string()
 
         with DatabaseConnection(conn_string) as db:
-            if db.is_connected():
+            if db.is_connected:
                 print(f"  {GREEN}{CHECKMARK}{RESET} Connected to database")
                 return True
             else:
@@ -89,9 +89,9 @@ def check_tables():
 
         from job_tracker.database.connection import DatabaseConnection
         from job_tracker.database.query_executor import QueryExecutor
-        from job_tracker.utils.config import get_connection_string
+        from job_tracker.utils.config import Config
 
-        conn_string = get_connection_string()
+        conn_string = Config().get_connection_string()
 
         required_tables = [
             'companies',
@@ -103,7 +103,7 @@ def check_tables():
         ]
 
         with DatabaseConnection(conn_string) as db:
-            executor = QueryExecutor(db)
+            executor = QueryExecutor(db.connection)
 
             query = """
                 SELECT table_name 

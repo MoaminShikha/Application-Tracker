@@ -19,7 +19,7 @@ class AnalyticsService(BaseService):
             FROM applications a
             JOIN application_statuses s ON s.id = a.current_status
         """
-        with self._executor() as (_, executor):
+        with self._executor() as executor:
             row = executor.execute_query_single(query)
             return row or {
                 "total_applications": 0,
@@ -37,7 +37,7 @@ class AnalyticsService(BaseService):
             GROUP BY s.status_name
             ORDER BY count DESC, s.status_name ASC
         """
-        with self._executor() as (_, executor):
+        with self._executor() as executor:
             return executor.execute_query(query)
 
     def get_conversion_rates(self) -> Dict[str, float]:
@@ -50,7 +50,7 @@ class AnalyticsService(BaseService):
             FROM applications a
             JOIN application_statuses s ON s.id = a.current_status
         """
-        with self._executor() as (_, executor):
+        with self._executor() as executor:
             row = executor.execute_query_single(query) or {}
 
         total = row.get("total", 0.0) or 0.0
@@ -88,7 +88,7 @@ class AnalyticsService(BaseService):
             GROUP BY c.name
             ORDER BY avg_days_to_first_event ASC NULLS LAST
         """
-        with self._executor() as (_, executor):
+        with self._executor() as executor:
             return executor.execute_query(query)
 
     def get_recent_applications(self, days: int = 30) -> List[Dict[str, str]]:
@@ -107,5 +107,5 @@ class AnalyticsService(BaseService):
             WHERE a.applied_date >= CURRENT_DATE - (%s * INTERVAL '1 day')
             ORDER BY a.applied_date DESC
         """
-        with self._executor() as (_, executor):
+        with self._executor() as executor:
             return executor.execute_query(query, (days,))

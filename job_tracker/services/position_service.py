@@ -19,14 +19,9 @@ class PositionService(BaseService):
             RETURNING id, title, level, created_at
         """
 
-        with self._executor() as (db, executor):
-            try:
-                row = executor.execute_insert_returning(query, (position.title, position.level))
-                db.connection.commit()
-                return Position.from_dict(row)
-            except Exception:
-                db.connection.rollback()
-                raise
+        with self._transaction() as executor:
+            row = executor.execute_insert_returning(query, (position.title, position.level))
+            return Position.from_dict(row)
 
     def get_position(self, position_id: int) -> Optional[Position]:
         query = """
@@ -35,7 +30,7 @@ class PositionService(BaseService):
             WHERE id = %s
         """
 
-        with self._executor() as (_, executor):
+        with self._executor() as executor:
             row = executor.execute_query_single(query, (position_id,))
             return Position.from_dict(row) if row else None
 
@@ -46,19 +41,14 @@ class PositionService(BaseService):
             ORDER BY created_at DESC
         """
 
-        with self._executor() as (_, executor):
+        with self._executor() as executor:
             rows = executor.execute_query(query)
             return [Position.from_dict(row) for row in rows]
 
     def delete_position(self, position_id: int) -> bool:
         query = "DELETE FROM positions WHERE id = %s"
 
-        with self._executor() as (db, executor):
-            try:
-                affected = executor.execute_update(query, (position_id,))
-                db.connection.commit()
-                return affected > 0
-            except Exception:
-                db.connection.rollback()
-                raise
+        with self._transaction() as executor:
+            affected = executor.execute_update(query, (position_id,))
+            return affected > 0
 

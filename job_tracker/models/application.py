@@ -88,49 +88,6 @@ class Application(BaseModel):
         if self.notes and len(self.notes) > 255:
             raise ValidationError("Notes cannot exceed 255 characters")
 
-    def to_dict(self) -> dict:
-        """
-        Serialize application to dictionary.
-
-        Returns:
-            Dictionary representation
-        """
-        return {
-            'id': self.id,
-            'company_id': self.company_id,
-            'position_id': self.position_id,
-            'recruiter_id': self.recruiter_id,
-            'job_id': self.job_id,
-            'current_status': self.current_status,
-            'applied_date': self.applied_date,
-            'notes': self.notes,
-            'created_at': self.created_at,
-            'updated_at': self.updated_at
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> 'Application':
-        """
-        Deserialize application from dictionary.
-
-        Args:
-            data: Dictionary with application data
-
-        Returns:
-            Application instance
-
-        Raises:
-            ValidationError: If validation fails
-        """
-        try:
-            instance = cls(**data)
-            instance.validate()
-            return instance
-        except TypeError as e:
-            raise ValidationError(f"Invalid data for Application: {e}")
-        except ValidationError:
-            raise
-
     def days_in_current_status(self) -> int:
         """
         Calculate how many days the application has been in current status.

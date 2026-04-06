@@ -56,6 +56,17 @@ class _FakeApplicationService:
         )
 
 
+class _FakeApplicationFlow:
+    def create_application(self, company_id, position_id, applied_date=None, recruiter_id=None, job_id=None, notes=None):
+        return _FakeApplication(
+            app_id=7,
+            company_id=company_id,
+            position_id=position_id,
+            applied_date=applied_date or date.today(),
+            job_id=job_id,
+        )
+
+
 def test_add_company_command(monkeypatch):
     monkeypatch.setattr(cli_main, "CompanyService", _FakeCompanyService)
     runner = CliRunner()
@@ -73,7 +84,7 @@ def test_analytics_command(monkeypatch):
 
 
 def test_add_application_accepts_optional_job_id(monkeypatch):
-    monkeypatch.setattr(cli_main, "ApplicationService", _FakeApplicationService)
+    monkeypatch.setattr(cli_main, "ApplicationFlow", _FakeApplicationFlow)
     runner = CliRunner()
     result = runner.invoke(
         cli_main.cli,

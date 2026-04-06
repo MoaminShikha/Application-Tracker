@@ -28,7 +28,7 @@ class _FakeExecutor:
 
 @contextmanager
 def _fake_executor_context():
-    yield None, _FakeExecutor()
+    yield _FakeExecutor()
 
 
 def test_get_conversion_rates_calculates_percentages():

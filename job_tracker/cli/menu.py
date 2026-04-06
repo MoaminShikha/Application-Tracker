@@ -15,13 +15,39 @@ from job_tracker.analytics import AnalyticsService
 from job_tracker.utils.colors import colorize_status
 
 
+def _build_menu_snapshot() -> list[str]:
+    """Build a compact runtime snapshot for the menu header."""
+    try:
+        analytics = AnalyticsService()
+        company_svc = CompanyService()
+        recruiter_svc = RecruiterService()
+
+        overview = analytics.get_overview_counts()
+        company_count = len(company_svc.get_all_companies())
+        recruiter_count = len(recruiter_svc.get_all_recruiters())
+
+        return [
+            f"Applications: {overview.get('total_applications', 0)} total",
+            f"Active: {overview.get('active_applications', 0)}",
+            f"Offers: {overview.get('offers', 0)}",
+            f"Accepted: {overview.get('accepted', 0)}",
+            f"Companies: {company_count}",
+            f"Recruiters: {recruiter_count}",
+        ]
+    except Exception:
+        # Keep menu available even if snapshot queries fail.
+        return ["Applications: unavailable", "Active: unavailable", "Offers: unavailable"]
+
+
 def display_main_menu():
     """Display the main menu and return user choice."""
     click.clear()
     click.echo("=" * 70)
-    click.echo("🎯 APPLICATION TRACKER - Main Menu")
+    click.echo("🎯 APPLICATION TRACKER")
+    click.echo("   Track applications, interviews, and outcomes in one place")
     click.echo("=" * 70)
-    click.echo("\nWhat would you like to do?\n")
+    click.echo("\nQuick snapshot:")
+    click.echo("  • " + " | ".join(_build_menu_snapshot()))
 
     click.echo("📝 APPLICATIONS (Main Workflow)")
     click.echo("  1. Add a new job application")
@@ -57,7 +83,7 @@ def display_main_menu():
     click.echo("  0. Exit")
     click.echo("")
 
-    choice = click.prompt("Enter your choice (0-15)", type=int, default=0)
+    choice = click.prompt("Enter your choice (0-15)", type=click.IntRange(0, 15), default=0)
     return choice
 
 
@@ -68,7 +94,7 @@ def display_companies_table():
 
     if not companies:
         click.echo("\n📭 No companies found.")
-        click.echo("💡 Tip: Choose option 1 to add your first company!")
+        click.echo("💡 Tip: Choose option 1 to add your first application (company is created/reused there).")
         return
 
     # Prepare table data
@@ -98,7 +124,7 @@ def display_applications_table():
 
     if not apps:
         click.echo("\n📭 No applications found.")
-        click.echo("💡 Tip: Choose option 6 to create your first application!")
+        click.echo("💡 Tip: Choose option 1 to create your first application!")
         return
 
     # Build rich table with company/position names
@@ -198,11 +224,11 @@ def add_position_interactive():
     title = click.prompt("Job title (e.g., 'Software Engineer')", type=str)
 
     click.echo("\nAvailable seniority levels:")
-    levels = ["Entry", "Intern", "Junior", "Mid", "Senior", "Lead", "Manager"]
+    levels = ["Entry", "Intern", "Junior", "Mid", "Senior", "Student", "Lead", "Manager"]
     for idx, level in enumerate(levels, 1):
         click.echo(f"  {idx}. {level}")
 
-    level_choice = click.prompt("Choose level (1-7)", type=click.IntRange(1, 7))
+    level_choice = click.prompt(f"Choose level (1-{len(levels)})", type=click.IntRange(1, len(levels)))
     level = levels[level_choice - 1]
 
     try:
@@ -296,11 +322,11 @@ def add_application_interactive():
     position_title = click.prompt("\n💼 Job title (e.g., 'Software Engineer')", type=str)
 
     click.echo("\nSeniority level:")
-    levels = ["Entry", "Intern", "Junior", "Mid", "Senior", "Lead", "Manager"]
+    levels = ["Entry", "Intern", "Junior", "Mid", "Senior", "Student", "Lead", "Manager"]
     for idx, level in enumerate(levels, 1):
         click.echo(f"  {idx}. {level}")
 
-    level_choice = click.prompt("Choose level (1-7)", type=click.IntRange(1, 7))
+    level_choice = click.prompt(f"Choose level (1-{len(levels)})", type=click.IntRange(1, len(levels)))
     position_level = levels[level_choice - 1]
 
     # Check if position exists

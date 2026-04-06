@@ -2,16 +2,20 @@
 Create the PostgreSQL database before init_db.py runs.
 This script connects to the default 'postgres' database and creates 'job_tracker'.
 """
+import os
 import psycopg2
 from psycopg2 import sql, errors
+from pathlib import Path
+from dotenv import load_dotenv
 
-# Connection to default postgres database (no job_tracker db needed yet)
+load_dotenv(Path(__file__).parent.parent / '.env')
+
 conn_params = {
-    'host': 'localhost',
-    'port': 5432,
+    'host': os.getenv('DB_HOST', 'localhost'),
+    'port': int(os.getenv('DB_PORT', '5432')),
     'database': 'postgres',
-    'user': 'postgres',
-    'password': 'm0535266305'
+    'user': os.getenv('DB_USER', 'postgres'),
+    'password': os.getenv('DB_PASSWORD', ''),
 }
 
 try:

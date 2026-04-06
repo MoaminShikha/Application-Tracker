@@ -41,14 +41,9 @@ class EventService(BaseService):
             """
             params = (application_id, event_type, notes)
 
-        with self._executor() as (db, executor):
-            try:
-                row = executor.execute_insert_returning(query, params)
-                db.connection.commit()
-                return ApplicationEvent.from_dict(row)
-            except Exception:
-                db.connection.rollback()
-                raise
+        with self._transaction() as executor:
+            row = executor.execute_insert_returning(query, params)
+            return ApplicationEvent.from_dict(row)
 
     def get_event(self, event_id: int) -> Optional[ApplicationEvent]:
         query = """
@@ -57,7 +52,7 @@ class EventService(BaseService):
             WHERE id = %s
         """
 
-        with self._executor() as (_, executor):
+        with self._executor() as executor:
             row = executor.execute_query_single(query, (event_id,))
             return ApplicationEvent.from_dict(row) if row else None
 
@@ -69,7 +64,7 @@ class EventService(BaseService):
             ORDER BY event_date ASC
         """
 
-        with self._executor() as (_, executor):
+        with self._executor() as executor:
             rows = executor.execute_query(query, (application_id,))
             return [ApplicationEvent.from_dict(row) for row in rows]
 

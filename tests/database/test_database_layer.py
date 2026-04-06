@@ -58,7 +58,7 @@ class TestDatabaseConnection:
         """Test successful database connection."""
         mock_connection = MagicMock()
         mock_cursor = MagicMock()
-        mock_connection.cursor.return_value = mock_cursor
+        mock_connection.cursor.return_value.__enter__.return_value = mock_cursor
         mock_connect.return_value = mock_connection
 
         db_connection.connect()
@@ -67,7 +67,7 @@ class TestDatabaseConnection:
         assert db_connection.connection == mock_connection
         mock_connect.assert_called_once()
         mock_cursor.execute.assert_called_once()
-        mock_cursor.close.assert_called_once()
+        mock_connection.cursor.return_value.__exit__.assert_called_once()
 
     @patch('psycopg2.connect')
     def test_connect_timeout_error(self, mock_connect, db_connection):
@@ -133,7 +133,7 @@ class TestDatabaseConnection:
         """Test context manager enters and exits correctly."""
         mock_connection = MagicMock()
         mock_cursor = MagicMock()
-        mock_connection.cursor.return_value = mock_cursor
+        mock_connection.cursor.return_value.__enter__.return_value = mock_cursor
         mock_connect.return_value = mock_connection
 
         with db_connection:
@@ -147,7 +147,7 @@ class TestDatabaseConnection:
         """Test context manager disconnects even if exception occurs."""
         mock_connection = MagicMock()
         mock_cursor = MagicMock()
-        mock_connection.cursor.return_value = mock_cursor
+        mock_connection.cursor.return_value.__enter__.return_value = mock_cursor
         mock_connect.return_value = mock_connection
 
         try:
@@ -300,6 +300,7 @@ class TestTransactionManager:
         """Create a mock DatabaseConnection."""
         mock = MagicMock(spec=DatabaseConnection)
         mock.is_connected = True
+        mock.connection = MagicMock()
         return mock
 
     @pytest.fixture
@@ -326,7 +327,8 @@ class TestTransactionManager:
         transaction_manager.begin_transaction()
 
         assert transaction_manager._transaction_depth == 1
-        mock_db_connection.execute_query.assert_called_once_with("BEGIN", fetch=False)
+        mock_db_connection.connection.cursor.assert_called_once()
+        mock_db_connection.connection.cursor.return_value.__enter__.return_value.execute.assert_called_once_with("BEGIN")
 
     def test_commit_simple_transaction(self, mock_db_connection, transaction_manager):
         """Test commit_transaction executes COMMIT."""
@@ -334,7 +336,7 @@ class TestTransactionManager:
         transaction_manager.commit()
 
         assert transaction_manager._transaction_depth == 0
-        calls = mock_db_connection.execute_query.call_args_list
+        calls = mock_db_connection.connection.cursor.return_value.__enter__.return_value.execute.call_args_list
         assert calls[1][0][0] == "COMMIT"
 
     def test_commit_without_transaction_raises_error(self, transaction_manager):
@@ -348,7 +350,7 @@ class TestTransactionManager:
         transaction_manager.rollback()
 
         assert transaction_manager._transaction_depth == 0
-        calls = mock_db_connection.execute_query.call_args_list
+        calls = mock_db_connection.connection.cursor.return_value.__enter__.return_value.execute.call_args_list
         assert calls[1][0][0] == "ROLLBACK"
 
     def test_rollback_without_transaction_raises_error(self, transaction_manager):
@@ -362,7 +364,7 @@ class TestTransactionManager:
         transaction_manager.begin_transaction()
 
         assert transaction_manager._transaction_depth == 2
-        calls = mock_db_connection.execute_query.call_args_list
+        calls = mock_db_connection.connection.cursor.return_value.__enter__.return_value.execute.call_args_list
         assert "SAVEPOINT" in calls[1][0][0]
 
     def test_nested_transaction_commit_releases_savepoint(self, mock_db_connection, transaction_manager):
@@ -372,7 +374,7 @@ class TestTransactionManager:
         transaction_manager.commit()
 
         assert transaction_manager._transaction_depth == 1
-        calls = mock_db_connection.execute_query.call_args_list
+        calls = mock_db_connection.connection.cursor.return_value.__enter__.return_value.execute.call_args_list
         assert "RELEASE SAVEPOINT" in calls[2][0][0]
 
     def test_context_manager_commits_on_success(self, mock_db_connection):
@@ -384,7 +386,7 @@ class TestTransactionManager:
             pass
 
         assert tm._transaction_depth == 0
-        calls = mock_db_connection.execute_query.call_args_list
+        calls = mock_db_connection.connection.cursor.return_value.__enter__.return_value.execute.call_args_list
         assert calls[1][0][0] == "COMMIT"
 
     def test_context_manager_rollback_on_exception(self, mock_db_connection):
@@ -399,7 +401,7 @@ class TestTransactionManager:
             pass
 
         assert tm._transaction_depth == 0
-        calls = mock_db_connection.execute_query.call_args_list
+        calls = mock_db_connection.connection.cursor.return_value.__enter__.return_value.execute.call_args_list
         assert calls[1][0][0] == "ROLLBACK"
 
     def test_is_in_transaction_property(self, transaction_manager):
@@ -454,7 +456,11 @@ class TestIntegrationScenarios:
         """Test transaction with multiple inserts."""
         mock_db_conn = MagicMock(spec=DatabaseConnection)
         mock_db_conn.is_connected = True
-        mock_db_conn.execute_query = MagicMock()
+        mock_db_conn.connection = mock_connection
+        mock_transaction_cursor = MagicMock()
+        mock_transaction_cursor.__enter__.return_value = mock_transaction_cursor
+        mock_transaction_cursor.__exit__.return_value = False
+        mock_connection.cursor.return_value = mock_transaction_cursor
 
         tm = TransactionManager(mock_db_conn)
 
@@ -463,7 +469,7 @@ class TestIntegrationScenarios:
             pass
 
         assert tm._transaction_depth == 0
-        assert mock_db_conn.execute_query.call_count >= 2  # BEGIN + COMMIT
+        assert mock_transaction_cursor.execute.call_count >= 2  # BEGIN + COMMIT
 
 
 if __name__ == '__main__':

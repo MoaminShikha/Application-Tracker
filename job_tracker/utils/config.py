@@ -44,8 +44,8 @@ class Config:
         self.db_host: str = os.getenv('DB_HOST', 'localhost')
         self.db_port: int = int(os.getenv('DB_PORT', '5432'))
         self.db_name: str = os.getenv('DB_NAME', 'job_tracker')
-        self.db_user: str = os.getenv('DB_USER', 'postgres') # Must change later
-        self.db_password: str = os.getenv('DB_PASSWORD', 'm0535266305') # Must change later
+        self.db_user: str = os.getenv('DB_USER', 'postgres')
+        self.db_password: str = os.getenv('DB_PASSWORD', '')
 
         logger.debug(f"Database configuration loaded: {self}")
 

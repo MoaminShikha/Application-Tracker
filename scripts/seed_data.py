@@ -20,6 +20,7 @@ from job_tracker.services import (
     RecruiterService,
     ApplicationService,
     EventService,
+    StatusService,
 )
 
 
@@ -33,6 +34,13 @@ def seed_data():
     recruiter_svc = RecruiterService()
     app_svc = ApplicationService()
     event_svc = EventService()
+    status_svc = StatusService()
+
+    def status_id(name: str) -> int:
+        sid = status_svc.get_status_id_by_name(name)
+        if sid is None:
+            raise ValueError(f"Required status '{name}' not found in application_statuses")
+        return sid
 
     # Companies
     print("📋 Creating companies...")
@@ -65,7 +73,7 @@ def seed_data():
         {"title": "DevOps Engineer", "level": "Mid"},
         {"title": "Site Reliability Engineer", "level": "Senior"},
         {"title": "Engineering Manager", "level": "Lead"},
-        {"title": "Staff Engineer", "level": "Staff"},
+        {"title": "Student Intern", "level": "Student"},
     ]
 
     created_positions = []
@@ -113,7 +121,7 @@ def seed_data():
         applied_date=date.today() - timedelta(days=14),
         notes="Referral from former colleague. Strong team fit."
     )
-    app_svc.update_application_status(app1.id, app_svc._get_status_id_by_name("Interview Scheduled"))
+    app_svc.update_application_status(app1.id, status_id("Interview Scheduled"))
     event_svc.log_event(
         app1.id,
         "Interview Scheduled",
@@ -130,8 +138,8 @@ def seed_data():
         applied_date=date.today() - timedelta(days=21),
         notes="Applied via LinkedIn. Competitive compensation package."
     )
-    app_svc.update_application_status(app2.id, app_svc._get_status_id_by_name("Interview Scheduled"))
-    app_svc.update_application_status(app2.id, app_svc._get_status_id_by_name("Interviewed"))
+    app_svc.update_application_status(app2.id, status_id("Interview Scheduled"))
+    app_svc.update_application_status(app2.id, status_id("Interviewed"))
     event_svc.log_event(
         app2.id,
         "Interview",
@@ -148,9 +156,9 @@ def seed_data():
         applied_date=date.today() - timedelta(days=35),
         notes="Dream role - data engineering with distributed systems focus"
     )
-    app_svc.update_application_status(app3.id, app_svc._get_status_id_by_name("Interview Scheduled"))
-    app_svc.update_application_status(app3.id, app_svc._get_status_id_by_name("Interviewed"))
-    app_svc.update_application_status(app3.id, app_svc._get_status_id_by_name("Offer"))
+    app_svc.update_application_status(app3.id, status_id("Interview Scheduled"))
+    app_svc.update_application_status(app3.id, status_id("Interviewed"))
+    app_svc.update_application_status(app3.id, status_id("Offer"))
     event_svc.log_event(
         app3.id,
         "Offer Received",
@@ -175,9 +183,9 @@ def seed_data():
         applied_date=date.today() - timedelta(days=42),
         notes="Payment infrastructure team"
     )
-    app_svc.update_application_status(app5.id, app_svc._get_status_id_by_name("Interview Scheduled"))
-    app_svc.update_application_status(app5.id, app_svc._get_status_id_by_name("Interviewed"))
-    app_svc.update_application_status(app5.id, app_svc._get_status_id_by_name("Rejected"))
+    app_svc.update_application_status(app5.id, status_id("Interview Scheduled"))
+    app_svc.update_application_status(app5.id, status_id("Interviewed"))
+    app_svc.update_application_status(app5.id, status_id("Rejected"))
     event_svc.log_event(
         app5.id,
         "Rejection",
@@ -202,7 +210,7 @@ def seed_data():
         applied_date=date.today() - timedelta(days=28),
         notes="Culture concerns after research"
     )
-    app_svc.update_application_status(app7.id, app_svc._get_status_id_by_name("Withdrawn"))
+    app_svc.update_application_status(app7.id, status_id("Withdrawn"))
     event_svc.log_event(
         app7.id,
         "Withdrawal",
@@ -218,7 +226,7 @@ def seed_data():
         applied_date=date.today() - timedelta(days=18),
         notes="Exciting opportunity in data infrastructure"
     )
-    app_svc.update_application_status(app8.id, app_svc._get_status_id_by_name("Interview Scheduled"))
+    app_svc.update_application_status(app8.id, status_id("Interview Scheduled"))
     event_svc.log_event(
         app8.id,
         "Interview Scheduled",

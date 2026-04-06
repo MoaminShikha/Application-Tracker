@@ -41,11 +41,12 @@ def prompt_position_details():
     title = click.prompt("Job title (e.g., 'Software Engineer', 'Data Scientist')", type=str)
 
     click.echo("\nAvailable seniority levels:")
-    for idx, level in enumerate(sorted(VALID_LEVELS), 1):
+    levels = sorted(VALID_LEVELS)
+    for idx, level in enumerate(levels, 1):
         click.echo(f"  {idx}. {level}")
 
-    level_choice = click.prompt("Choose level (1-7)", type=click.IntRange(1, 7))
-    level = sorted(VALID_LEVELS)[level_choice - 1]
+    level_choice = click.prompt(f"Choose level (1-{len(levels)})", type=click.IntRange(1, len(levels)))
+    level = levels[level_choice - 1]
 
     return {"title": title, "level": level}
 

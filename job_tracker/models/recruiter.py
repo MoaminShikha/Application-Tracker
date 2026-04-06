@@ -60,42 +60,4 @@ class Recruiter(BaseModel):
             if len(self.phone) > 50:
                 raise ValidationError("Phone cannot exceed 50 characters")
 
-    def to_dict(self) -> dict:
-        """
-        Serialize recruiter to dictionary.
-
-        Returns:
-            Dictionary representation
-        """
-        return {
-            'id': self.id,
-            'name': self.name,
-            'email': self.email,
-            'phone': self.phone,
-            'company_id': self.company_id,
-            'created_at': self.created_at
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> 'Recruiter':
-        """
-        Deserialize recruiter from dictionary.
-
-        Args:
-            data: Dictionary with recruiter data
-
-        Returns:
-            Recruiter instance
-
-        Raises:
-            ValidationError: If validation fails
-        """
-        try:
-            instance = cls(**data)
-            instance.validate()
-            return instance
-        except TypeError as e:
-            raise ValidationError(f"Invalid data for Recruiter: {e}")
-        except ValidationError:
-            raise
 

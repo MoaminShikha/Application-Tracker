@@ -66,43 +66,4 @@ class Company(BaseModel):
             if len(self.notes) > 255:
                 raise ValidationError("Notes cannot exceed 255 characters")
 
-    def to_dict(self) -> dict:
-        """
-        Serialize company to dictionary.
-
-        Returns:
-            Dictionary representation
-        """
-        return {
-            'id': self.id,
-            'name': self.name,
-            'industry': self.industry,
-            'location': self.location,
-            'notes': self.notes,
-            'created_at': self.created_at,
-            'updated_at': self.updated_at
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> 'Company':
-        """
-        Deserialize company from dictionary.
-
-        Args:
-            data: Dictionary with company data
-
-        Returns:
-            Company instance
-
-        Raises:
-            ValidationError: If validation fails
-        """
-        try:
-            instance = cls(**data)
-            instance.validate()
-            return instance
-        except TypeError as e:
-            raise ValidationError(f"Invalid data for Company: {e}")
-        except ValidationError:
-            raise
 

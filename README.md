@@ -20,7 +20,11 @@ This project demonstrates a layered architecture pattern:
 ┌─────────────────────────────────────┐
 │   CLI Layer (Click + Tabulate)     │
 ├─────────────────────────────────────┤
+│   Use-Case Layer (Orchestration)   │
+├─────────────────────────────────────┤
 │   Service Layer (Business Logic)   │
+├─────────────────────────────────────┤
+│   Domain Layer (Shared Errors)     │
 ├─────────────────────────────────────┤
 │   Model Layer (Data Validation)    │
 ├─────────────────────────────────────┤
@@ -33,6 +37,8 @@ This project demonstrates a layered architecture pattern:
 Key architectural decisions:
 - **PostgreSQL over SQLite**: Demonstrates production-ready database interactions with proper connection management
 - **Service Layer Pattern**: Separates business logic from data access and presentation
+- **Use-Case Layer**: `job_tracker/use_cases/application_flow.py` keeps the CLI thin and reusable for future interfaces
+- **Domain Errors**: `job_tracker/domain/exceptions.py` standardizes user-facing error mapping across layers
 - **Dataclass Models**: Type-safe data structures with built-in validation
 - **Context Managers**: Ensures proper resource cleanup for database connections
 
@@ -132,6 +138,9 @@ python -m job_tracker.cli add-company --name "Google" --industry "Technology"
 # Create an application
 python -m job_tracker.cli add-application --company-id 1 --position-id 1 --job-id "GH-12345"
 
+# List applications with optional sorting/filtering/pagination
+python -m job_tracker.cli list-applications --sort-by applied_date --sort-dir asc --limit 10 --company-id 1
+
 # View analytics
 python -m job_tracker.cli analytics
 
@@ -145,10 +154,12 @@ Run `python -m job_tracker.cli --help` for all available commands.
 
 ```
 job_tracker/
+├── domain/             # Shared domain-level errors and adapters
 ├── analytics/          # Reporting and metrics calculation
 ├── cli/                # Command-line interface
 ├── database/           # Connection management and query execution
 ├── models/             # Data models with validation
+├── use_cases/          # Thin orchestration layer for interface adapters
 ├── services/           # Business logic layer
 └── utils/              # Configuration and logging
 

@@ -6,16 +6,20 @@ from dataclasses import dataclass
 from typing import Optional
 from job_tracker.models.base import BaseModel, ValidationError
 
-# Valid statuses and their terminal state designation
-VALID_STATUSES = {
-    "Applied": False,
-    "Interview Scheduled": False,
-    "Interviewed": False,
-    "Offer": False,
-    "Accepted": True,
-    "Rejected": True,
-    "Withdrawn": True
+# Single source of truth for the application status state machine.
+# To add a new status: add one entry here. Everything else derives from this.
+STATUS_MACHINE: dict[str, dict] = {
+    "Applied":             {"is_terminal": False, "transitions": {"Interview Scheduled", "Rejected", "Withdrawn"}},
+    "Interview Scheduled": {"is_terminal": False, "transitions": {"Interviewed", "Rejected"}},
+    "Interviewed":         {"is_terminal": False, "transitions": {"Offer", "Rejected"}},
+    "Offer":               {"is_terminal": False, "transitions": {"Accepted", "Rejected", "Withdrawn"}},
+    "Accepted":            {"is_terminal": True,  "transitions": set()},
+    "Rejected":            {"is_terminal": True,  "transitions": set()},
+    "Withdrawn":           {"is_terminal": True,  "transitions": set()},
 }
+
+# Derived view kept for backwards compatibility with any direct callers.
+VALID_STATUSES = {name: info["is_terminal"] for name, info in STATUS_MACHINE.items()}
 
 
 @dataclass
@@ -65,53 +69,15 @@ class ApplicationStatus(BaseModel):
         if len(self.status_name) > 50:
             raise ValidationError("Status name cannot exceed 50 characters")
 
-        if self.status_name not in VALID_STATUSES:
-            raise ValidationError(f"Invalid status '{self.status_name}'. Valid statuses: {', '.join(VALID_STATUSES.keys())}")
+        if self.status_name not in STATUS_MACHINE:
+            raise ValidationError(f"Invalid status '{self.status_name}'. Valid statuses: {', '.join(STATUS_MACHINE.keys())}")
 
-        # Verify is_terminal matches expected value
-        expected_terminal = VALID_STATUSES[self.status_name]
+        expected_terminal = STATUS_MACHINE[self.status_name]["is_terminal"]
         if self.is_terminal != expected_terminal:
             raise ValidationError(f"Status '{self.status_name}' should have is_terminal={expected_terminal}")
 
         if self.description and len(self.description) > 255:
             raise ValidationError("Description cannot exceed 255 characters")
-
-    def to_dict(self) -> dict:
-        """
-        Serialize status to dictionary.
-
-        Returns:
-            Dictionary representation
-        """
-        return {
-            'id': self.id,
-            'status_name': self.status_name,
-            'description': self.description,
-            'is_terminal': self.is_terminal
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> 'ApplicationStatus':
-        """
-        Deserialize status from dictionary.
-
-        Args:
-            data: Dictionary with status data
-
-        Returns:
-            ApplicationStatus instance
-
-        Raises:
-            ValidationError: If validation fails
-        """
-        try:
-            instance = cls(**data)
-            instance.validate()
-            return instance
-        except TypeError as e:
-            raise ValidationError(f"Invalid data for ApplicationStatus: {e}")
-        except ValidationError:
-            raise
 
     def is_final_state(self) -> bool:
         """

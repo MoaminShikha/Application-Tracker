@@ -10,8 +10,6 @@ from job_tracker.database.exceptions import (
     NestedTransactionError,
     TransactionAbortedError
 )
-from job_tracker.database.logger import db_logger
-
 logger = logging.getLogger(__name__)
 
 
@@ -66,13 +64,11 @@ class TransactionManager:
         """
         if self._transaction_depth > 0:
             self._execute_query("SAVEPOINT transaction_{}".format(self._transaction_depth))
-            logger.debug("Savepoint created successfully.")
-            db_logger.log_transaction("savepoint created", f"depth={self._transaction_depth}")
+            logger.debug("Savepoint created at depth=%d", self._transaction_depth)
         else:
             self._execute_query("BEGIN")
             self._transaction_start_time = time.time()
-            logger.debug("Transaction started successfully.")
-            db_logger.log_transaction("started", f"timeout={self.timeout_seconds}s")
+            logger.debug("Transaction started (timeout=%ds)", self.timeout_seconds)
         self._transaction_depth += 1
 
     def commit(self) -> None:
@@ -90,16 +86,12 @@ class TransactionManager:
             elif self._transaction_depth == 1:
                 self._execute_query("COMMIT")
                 self._transaction_start_time = None
-                logger.debug("Transaction committed successfully.")
-                db_logger.log_transaction("committed")
+                logger.debug("Transaction committed")
             else:
                 self._execute_query("RELEASE SAVEPOINT transaction_{}".format(self._transaction_depth - 1))
-                logger.debug("Savepoint released successfully.")
-                db_logger.log_transaction("savepoint released", f"depth={self._transaction_depth - 1}")
+                logger.debug("Savepoint released at depth=%d", self._transaction_depth - 1)
             self._transaction_depth -= 1
-        except NoActiveTransactionError as e:
-            logger.error(e)
-            db_logger.log_error(e, "Commit failed")
+        except NoActiveTransactionError:
             raise
 
     def rollback(self) -> None:
@@ -115,16 +107,12 @@ class TransactionManager:
             elif self._transaction_depth == 1:
                 self._execute_query("ROLLBACK")
                 self._transaction_start_time = None
-                logger.debug("Transaction rolled back successfully.")
-                db_logger.log_transaction("rolled back")
+                logger.debug("Transaction rolled back")
             else:
                 self._execute_query("ROLLBACK TO SAVEPOINT transaction_{}".format(self._transaction_depth - 1))
-                logger.debug("Savepoint rolled back successfully.")
-                db_logger.log_transaction("savepoint rolled back", f"depth={self._transaction_depth - 1}")
+                logger.debug("Savepoint rolled back at depth=%d", self._transaction_depth - 1)
             self._transaction_depth -= 1
-        except NoActiveTransactionError as e:
-            logger.error(e)
-            db_logger.log_error(e, "Rollback failed")
+        except NoActiveTransactionError:
             raise
 
     def _check_timeout(self) -> None:
@@ -139,15 +127,17 @@ class TransactionManager:
 
     def _execute_query(self, query: str) -> None:
         """
-        Execute SQL command and handle errors.
+        Execute a SQL command directly on the underlying psycopg2 connection.
 
         :param query: SQL command to execute
         :raises TransactionError: If execution fails
         """
         try:
-            self.connection.execute_query(query, fetch=False)
+            connection = getattr(self.connection, "connection", self.connection)
+            with connection.cursor() as cur:
+                cur.execute(query)
         except Exception as e:
-            logger.error(f"Transaction error during query execution: {e}")
+            logger.error("Transaction error during query execution: %s", e)
             raise TransactionError(f"Failed to execute query: {e}")
 
     @property

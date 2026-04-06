@@ -4,6 +4,7 @@ from typing import List, Optional
 
 from job_tracker.models.company import Company
 from job_tracker.services.base_service import BaseService
+from job_tracker.services.query_options import ListQueryOptions
 
 
 class CompanyService(BaseService):
@@ -25,17 +26,12 @@ class CompanyService(BaseService):
             RETURNING id, name, industry, location, notes, created_at, updated_at
         """
 
-        with self._executor() as (db, executor):
-            try:
-                row = executor.execute_insert_returning(
-                    query,
-                    (company.name, company.industry, company.location, company.notes),
-                )
-                db.connection.commit()
-                return Company.from_dict(row)
-            except Exception:
-                db.connection.rollback()
-                raise
+        with self._transaction() as executor:
+            row = executor.execute_insert_returning(
+                query,
+                (company.name, company.industry, company.location, company.notes),
+            )
+            return Company.from_dict(row)
 
     def get_company(self, company_id: int) -> Optional[Company]:
         query = """
@@ -44,19 +40,32 @@ class CompanyService(BaseService):
             WHERE id = %s
         """
 
-        with self._executor() as (_, executor):
+        with self._executor() as executor:
             row = executor.execute_query_single(query, (company_id,))
             return Company.from_dict(row) if row else None
 
-    def get_all_companies(self) -> List[Company]:
-        query = """
+    def get_all_companies(self, options: Optional[ListQueryOptions] = None) -> List[Company]:
+        options = options or ListQueryOptions(sort_by="created_at", sort_dir="desc")
+        sort_columns = {"id", "name", "created_at", "updated_at"}
+        sort_by = options.sort_by if options.sort_by in sort_columns else "created_at"
+        sort_dir = "ASC" if str(options.sort_dir).lower() == "asc" else "DESC"
+
+        query = f"""
             SELECT id, name, industry, location, notes, created_at, updated_at
             FROM companies
-            ORDER BY created_at DESC
+            ORDER BY {sort_by} {sort_dir}
         """
 
-        with self._executor() as (_, executor):
-            rows = executor.execute_query(query)
+        params = []
+        if options.limit is not None:
+            query += "\n LIMIT %s"
+            params.append(options.limit)
+        if options.offset is not None:
+            query += "\n OFFSET %s"
+            params.append(options.offset)
+
+        with self._executor() as executor:
+            rows = executor.execute_query(query, tuple(params) if params else None)
             return [Company.from_dict(row) for row in rows]
 
     def update_company(self, company_id: int, **fields) -> Optional[Company]:
@@ -81,24 +90,28 @@ class CompanyService(BaseService):
             RETURNING id, name, industry, location, notes, created_at, updated_at
         """
 
-        with self._executor() as (db, executor):
-            try:
-                row = executor.execute_query_single(query, tuple(params))
-                db.connection.commit()
-                return Company.from_dict(row) if row else None
-            except Exception:
-                db.connection.rollback()
-                raise
+        with self._transaction() as executor:
+            current = executor.execute_query_single(
+                """
+                SELECT id, name, industry, location, notes, created_at, updated_at
+                FROM companies
+                WHERE id = %s
+                """,
+                (company_id,),
+            )
+            if not current:
+                return None
+
+            merged = {**current, **updates}
+            Company.from_dict(merged)
+
+            row = executor.execute_query_single(query, tuple(params))
+            return Company.from_dict(row) if row else None
 
     def delete_company(self, company_id: int) -> bool:
         query = "DELETE FROM companies WHERE id = %s"
 
-        with self._executor() as (db, executor):
-            try:
-                affected = executor.execute_update(query, (company_id,))
-                db.connection.commit()
-                return affected > 0
-            except Exception:
-                db.connection.rollback()
-                raise
+        with self._transaction() as executor:
+            affected = executor.execute_update(query, (company_id,))
+            return affected > 0
 

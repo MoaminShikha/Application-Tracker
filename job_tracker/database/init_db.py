@@ -3,6 +3,7 @@ from pathlib import Path
 from job_tracker.utils.config import Config
 from job_tracker.utils.logger import get_logger
 from .connection import DatabaseConnection
+from .query_executor import QueryExecutor
 from .exceptions import DatabaseError
 
 logger = get_logger(__name__)
@@ -16,12 +17,6 @@ class InitDB:
     """
 
     def __init__(self, schema_path: str | Path | None = None):
-        """
-        Initialize InitDB with configuration and schema location.
-
-        :param schema_path: Optional path to schema SQL file
-        :return: None
-        """
         self.config = Config()
         self.connection_string = self.config.get_connection_string()
 
@@ -30,7 +25,6 @@ class InitDB:
             schema_path = project_root / "database_setup" / "schema.sql"
 
         self.schema_path = Path(schema_path)
-        self._db = DatabaseConnection(self.connection_string)
         self._expected_tables = {
             "companies",
             "positions",
@@ -40,86 +34,57 @@ class InitDB:
             "application_statuses",
         }
 
-    def load_schema(self):
-        """
-        Load the schema SQL from disk.
+    def _connect(self) -> DatabaseConnection:
+        return DatabaseConnection(self.connection_string)
 
-        :return: Schema SQL as a string
-        :raises DatabaseError: If schema file is missing or empty
-        :raises FileNotFoundError: If schema file cannot be read
-        """
+    def load_schema(self) -> str:
         try:
             if not self.schema_path.exists():
                 raise FileNotFoundError(f"Schema file not found: {self.schema_path}")
-
             schema_sql = self.schema_path.read_text(encoding="utf-8").strip()
             if not schema_sql:
-                raise DatabaseError(f"Schema file cant be read: {self.schema_path}")
-
+                raise DatabaseError(f"Schema file is empty: {self.schema_path}")
             logger.info(f"Loaded schema from {self.schema_path}")
             return schema_sql
         except (OSError, FileNotFoundError) as exc:
             logger.error(f"Failed to load schema: {exc}")
             raise DatabaseError(f"Failed to load schema: {exc}")
 
-    def apply_schema(self):
-        """
-        Apply the schema SQL to the database.
-
-        :return: None
-        :raises DatabaseError: If schema execution fails
-        """
+    def apply_schema(self) -> None:
         schema_sql = self.load_schema()
-
         try:
-            with self._db as db:
-                db.execute_query(schema_sql, fetch=False)
+            with self._connect() as db:
+                executor = QueryExecutor(db.connection)
+                executor.execute_update(schema_sql)
+                db.connection.commit()
             logger.info("Schema applied successfully")
         except DatabaseError:
             logger.error("Failed to apply schema")
             raise
 
-    def _get_missing_tables(self):
-        """
-        Get a list of expected tables that are missing.
-
-        :return: List of missing table names
-        :raises DatabaseError: If lookup fails
-        """
+    def _get_missing_tables(self) -> list[str]:
         query = (
             "SELECT table_name "
             "FROM information_schema.tables "
             "WHERE table_schema = 'public'"
         )
-
         try:
-            with self._db as db:
-                rows = db.execute_query(query, fetch=True)
-            existing = {row[0] for row in rows}
+            with self._connect() as db:
+                executor = QueryExecutor(db.connection)
+                rows = executor.execute_query(query)
+            existing = {row["table_name"] for row in rows}
             return sorted(self._expected_tables - existing)
         except DatabaseError:
             logger.error("Failed to query existing tables")
             raise
 
-    def verify_tables(self):
-        """
-        Verify that all expected tables exist.
-
-        :return: None
-        :raises DatabaseError: If any required tables are missing
-        """
+    def verify_tables(self) -> None:
         missing = self._get_missing_tables()
         if missing:
             raise DatabaseError(f"Missing tables: {', '.join(missing)}")
-
         logger.info("All expected tables verified")
 
-    def seed_reference_data(self):
-        """
-        Seed reference data required by the application.
-
-        Uses UPSERT to keep this idempotent.
-        """
+    def seed_reference_data(self) -> None:
         seed_sql = (
             "INSERT INTO application_statuses (status_name, description, is_terminal) VALUES "
             "('Applied', 'Initial application submitted', FALSE), "
@@ -131,21 +96,18 @@ class InitDB:
             "('Withdrawn', 'Application withdrawn by candidate', TRUE) "
             "ON CONFLICT (status_name) DO NOTHING;"
         )
-
         try:
-            with self._db as db:
-                db.execute_query(seed_sql, fetch=False)
+            with self._connect() as db:
+                executor = QueryExecutor(db.connection)
+                executor.execute_update(seed_sql)
+                db.connection.commit()
             logger.info("Reference data seeded successfully")
         except DatabaseError:
             logger.error("Failed to seed reference data")
             raise
 
-    def ensure_schema_compatibility(self):
-        """
-        Apply additive schema updates for existing databases.
-
-        This keeps old databases usable when new optional columns are introduced.
-        """
+    def ensure_schema_compatibility(self) -> None:
+        """Apply additive schema updates for existing databases."""
         compatibility_sql = """
             ALTER TABLE applications
             ADD COLUMN IF NOT EXISTS job_id VARCHAR(100);
@@ -159,22 +121,17 @@ class InitDB:
 
             CREATE INDEX IF NOT EXISTS idx_applications_job_id ON applications (job_id);
         """
-
         try:
-            with self._db as db:
-                db.execute_query(compatibility_sql, fetch=False)
+            with self._connect() as db:
+                executor = QueryExecutor(db.connection)
+                executor.execute_update(compatibility_sql)
+                db.connection.commit()
             logger.info("Schema compatibility checks completed")
         except DatabaseError:
             logger.error("Failed while applying schema compatibility updates")
             raise
 
-    def initialize_database(self):
-        """
-        Initialize the database schema.
-
-        :return: None
-        :raises DatabaseError: If initialization fails
-        """
+    def initialize_database(self) -> None:
         try:
             missing = self._get_missing_tables()
             if missing:

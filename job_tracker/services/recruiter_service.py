@@ -25,17 +25,12 @@ class RecruiterService(BaseService):
             RETURNING id, name, email, phone, company_id, created_at
         """
 
-        with self._executor() as (db, executor):
-            try:
-                row = executor.execute_insert_returning(
-                    query,
-                    (recruiter.name, recruiter.email, recruiter.phone, recruiter.company_id),
-                )
-                db.connection.commit()
-                return Recruiter.from_dict(row)
-            except Exception:
-                db.connection.rollback()
-                raise
+        with self._transaction() as executor:
+            row = executor.execute_insert_returning(
+                query,
+                (recruiter.name, recruiter.email, recruiter.phone, recruiter.company_id),
+            )
+            return Recruiter.from_dict(row)
 
     def get_recruiter(self, recruiter_id: int) -> Optional[Recruiter]:
         query = """
@@ -44,7 +39,7 @@ class RecruiterService(BaseService):
             WHERE id = %s
         """
 
-        with self._executor() as (_, executor):
+        with self._executor() as executor:
             row = executor.execute_query_single(query, (recruiter_id,))
             return Recruiter.from_dict(row) if row else None
 
@@ -55,7 +50,7 @@ class RecruiterService(BaseService):
             ORDER BY created_at DESC
         """
 
-        with self._executor() as (_, executor):
+        with self._executor() as executor:
             rows = executor.execute_query(query)
             return [Recruiter.from_dict(row) for row in rows]
 
@@ -79,24 +74,28 @@ class RecruiterService(BaseService):
             RETURNING id, name, email, phone, company_id, created_at
         """
 
-        with self._executor() as (db, executor):
-            try:
-                row = executor.execute_query_single(query, tuple(params))
-                db.connection.commit()
-                return Recruiter.from_dict(row) if row else None
-            except Exception:
-                db.connection.rollback()
-                raise
+        with self._transaction() as executor:
+            current = executor.execute_query_single(
+                """
+                SELECT id, name, email, phone, company_id, created_at
+                FROM recruiters
+                WHERE id = %s
+                """,
+                (recruiter_id,),
+            )
+            if not current:
+                return None
+
+            merged = {**current, **updates}
+            Recruiter.from_dict(merged)
+
+            row = executor.execute_query_single(query, tuple(params))
+            return Recruiter.from_dict(row) if row else None
 
     def delete_recruiter(self, recruiter_id: int) -> bool:
         query = "DELETE FROM recruiters WHERE id = %s"
 
-        with self._executor() as (db, executor):
-            try:
-                affected = executor.execute_update(query, (recruiter_id,))
-                db.connection.commit()
-                return affected > 0
-            except Exception:
-                db.connection.rollback()
-                raise
+        with self._transaction() as executor:
+            affected = executor.execute_update(query, (recruiter_id,))
+            return affected > 0
 

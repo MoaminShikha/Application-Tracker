@@ -2,19 +2,11 @@
 
 from typing import List, Optional, Union
 
-from job_tracker.models.application_status import ApplicationStatus
+from job_tracker.models.application_status import ApplicationStatus, STATUS_MACHINE
 from job_tracker.services.base_service import BaseService
 
-
-ALLOWED_TRANSITIONS = {
-    "Applied": {"Interview Scheduled", "Rejected", "Withdrawn"},
-    "Interview Scheduled": {"Interviewed", "Rejected"},
-    "Interviewed": {"Offer", "Rejected"},
-    "Offer": {"Accepted", "Rejected", "Withdrawn"},
-    "Accepted": set(),
-    "Rejected": set(),
-    "Withdrawn": set(),
-}
+# Derived from STATUS_MACHINE — do not edit here; edit STATUS_MACHINE in application_status.py.
+ALLOWED_TRANSITIONS = {name: info["transitions"] for name, info in STATUS_MACHINE.items()}
 
 
 class StatusService(BaseService):
@@ -27,7 +19,7 @@ class StatusService(BaseService):
             ORDER BY id ASC
         """
 
-        with self._executor() as (_, executor):
+        with self._executor() as executor:
             rows = executor.execute_query(query)
             return [ApplicationStatus.from_dict(row) for row in rows]
 
@@ -38,7 +30,7 @@ class StatusService(BaseService):
             WHERE id = %s
         """
 
-        with self._executor() as (_, executor):
+        with self._executor() as executor:
             row = executor.execute_query_single(query, (status_id,))
             return ApplicationStatus.from_dict(row) if row else None
 
@@ -66,7 +58,7 @@ class StatusService(BaseService):
 
     def get_status_id_by_name(self, status_name: str) -> Optional[int]:
         query = "SELECT id FROM application_statuses WHERE status_name = %s"
-        with self._executor() as (_, executor):
+        with self._executor() as executor:
             row = executor.execute_query_single(query, (status_name,))
             return row["id"] if row else None
 

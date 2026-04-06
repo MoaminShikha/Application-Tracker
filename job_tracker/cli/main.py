@@ -8,14 +8,21 @@ import click
 
 from job_tracker.analytics import AnalyticsService, build_dashboard_rows, to_csv_report, to_json_report
 from job_tracker.database.init_db import InitDB
+from job_tracker.domain.exceptions import (
+    ConstraintViolationError,
+    InvalidTransitionError,
+    NotFoundError,
+    ValidationFailedError,
+)
 from job_tracker.services import (
-    ApplicationService,
     CompanyService,
     EventService,
     PositionService,
     RecruiterService,
     StatusService,
 )
+from job_tracker.services.query_options import ApplicationQueryOptions
+from job_tracker.use_cases import ApplicationFlow
 from job_tracker.utils.colors import colorize_status
 
 # Import interactive mode and menu
@@ -79,7 +86,7 @@ def build_cli() -> click.Group:
 
     @cli.command("add-position")
     @click.option("--title", required=True, type=str, help="Job title")
-    @click.option("--level", required=True, type=str, help="Seniority: Entry/Intern/Junior/Mid/Senior/Lead/Manager")
+    @click.option("--level", required=True, type=str, help="Seniority: Entry/Intern/Junior/Mid/Senior/Student/Lead/Manager")
     def add_position(title: str, level: str) -> None:
         """Add a job position/title."""
         try:
@@ -88,7 +95,7 @@ def build_cli() -> click.Group:
             click.echo(f"✅ Created position #{position.id}: {position.title} ({position.level})")
         except Exception as e:
             click.echo(f"❌ Error: {e}", err=True)
-            click.echo("💡 Valid levels: Entry, Intern, Junior, Mid, Senior, Lead, Manager")
+            click.echo("💡 Valid levels: Entry, Intern, Junior, Mid, Senior, Student, Lead, Manager")
             raise click.Abort()
 
     @cli.command("add-recruiter")
@@ -142,8 +149,8 @@ def build_cli() -> click.Group:
     ) -> None:
         """Create a new job application record."""
         try:
-            svc = ApplicationService()
-            app = svc.create_application(
+            flow = ApplicationFlow()
+            app = flow.create_application(
                 company_id=company_id,
                 position_id=position_id,
                 applied_date=_parse_date(applied_date),
@@ -158,17 +165,42 @@ def build_cli() -> click.Group:
                 click.echo(f"   🆔 Job ID: {app.job_id}")
             click.echo(f"   📅 Applied: {app.applied_date}")
             click.echo(f"   ℹ️  Initial status set to 'Applied' and event logged automatically")
-        except Exception as e:
+        except (ValidationFailedError, ConstraintViolationError, NotFoundError) as e:
             click.echo(f"❌ Error: {e}", err=True)
             click.echo("💡 Tip: Run 'list-companies' to see company IDs")
             raise click.Abort()
+        except Exception as e:
+            click.echo(f"❌ Error: {e}", err=True)
+            raise click.Abort()
 
     @cli.command("list-applications")
-    def list_applications() -> None:
+    @click.option("--sort-by", default="created_at", type=click.Choice(["id", "created_at", "updated_at", "applied_date", "current_status"], case_sensitive=False), show_default=True, help="Sort column")
+    @click.option("--sort-dir", default="desc", type=click.Choice(["asc", "desc"], case_sensitive=False), show_default=True, help="Sort direction")
+    @click.option("--limit", default=None, type=int, help="Optional max rows")
+    @click.option("--offset", default=None, type=int, help="Optional row offset")
+    @click.option("--company-id", default=None, type=int, help="Optional company filter")
+    @click.option("--status-id", default=None, type=int, help="Optional status filter")
+    def list_applications(
+        sort_by: str,
+        sort_dir: str,
+        limit: Optional[int],
+        offset: Optional[int],
+        company_id: Optional[int],
+        status_id: Optional[int],
+    ) -> None:
         """View all your job applications."""
         try:
-            svc = ApplicationService()
-            apps = svc.get_all_applications()
+            flow = ApplicationFlow()
+            apps = flow.list_applications(
+                options=ApplicationQueryOptions(
+                    sort_by=sort_by,
+                    sort_dir=sort_dir,
+                    limit=limit,
+                    offset=offset,
+                    company_id=company_id,
+                    status_id=status_id,
+                )
+            )
             if not apps:
                 click.echo("📭 No applications found. Add one with: add-application")
                 return
@@ -180,6 +212,8 @@ def build_cli() -> click.Group:
                     f"  ID {a.id:3d} | Company {a.company_id:3d} | Position {a.position_id:3d} | "
                     f"Job ID {job_id_display:15s} | Status {a.current_status} | {a.applied_date}"
                 )
+        except (ValidationFailedError, ConstraintViolationError) as e:
+            click.echo(f"❌ Error: {e}", err=True)
         except Exception as e:
             click.echo(f"❌ Error: {e}", err=True)
 
@@ -189,26 +223,22 @@ def build_cli() -> click.Group:
     def update_status(application_id: int, new_status: str) -> None:
         """Update an application's status (validates state transitions)."""
         try:
-            app_svc = ApplicationService()
+            flow = ApplicationFlow()
             status_svc = StatusService()
-
-            status_id = int(new_status) if new_status.isdigit() else status_svc.get_status_id_by_name(new_status)
-            if status_id is None:
-                click.echo(f"❌ Unknown status: {new_status}")
-                click.echo("💡 Valid statuses: Applied, Interview Scheduled, Interviewed, Offer, Accepted, Rejected, Withdrawn")
-                raise click.Abort()
-
-            updated = app_svc.update_application_status(application_id=application_id, new_status=status_id)
-            if not updated:
-                click.echo(f"❌ Application {application_id} not found")
-                raise click.Abort()
-
+            updated = flow.update_status(application_id=application_id, new_status_input=new_status)
             status_name = status_svc.get_status(updated.current_status).status_name
             click.echo(f"✅ Updated application #{updated.id} to {colorize_status(status_name)}")
             click.echo(f"   ℹ️  Event logged automatically")
-        except ValueError as e:
+        except InvalidTransitionError as e:
             click.echo(f"❌ Invalid transition: {e}", err=True)
             click.echo("💡 Tip: Check valid transitions in the docs or use interactive mode")
+            raise click.Abort()
+        except NotFoundError as e:
+            click.echo(f"❌ {e}", err=True)
+            click.echo("💡 Valid statuses: Applied, Interview Scheduled, Interviewed, Offer, Accepted, Rejected, Withdrawn")
+            raise click.Abort()
+        except (ValidationFailedError, ConstraintViolationError) as e:
+            click.echo(f"❌ Error: {e}", err=True)
             raise click.Abort()
         except Exception as e:
             click.echo(f"❌ Error: {e}", err=True)

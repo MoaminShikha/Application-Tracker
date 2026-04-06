@@ -8,7 +8,7 @@ from datetime import datetime
 from job_tracker.models.base import BaseModel, ValidationError
 
 # Valid position levels
-VALID_LEVELS = {"Entry", "Intern", "Junior", "Mid", "Senior", "Lead", "Manager"}
+VALID_LEVELS = {"Entry", "Intern", "Junior", "Mid", "Senior", "Student", "Lead", "Manager"}
 
 
 @dataclass
@@ -22,7 +22,7 @@ class Position(BaseModel):
         level: Seniority level (required, must be one of VALID_LEVELS)
         created_at: Timestamp when created
 
-    Valid Levels: Entry, Intern, Junior, Mid, Senior, Lead, Manager
+    Valid Levels: Entry, Intern, Junior, Mid, Senior, Student, Lead, Manager
     """
 
     id: Optional[int] = None
@@ -50,40 +50,4 @@ class Position(BaseModel):
         if self.level not in VALID_LEVELS:
             raise ValidationError(f"Invalid level '{self.level}'. Must be one of: {', '.join(sorted(VALID_LEVELS))}")
 
-    def to_dict(self) -> dict:
-        """
-        Serialize position to dictionary.
-
-        Returns:
-            Dictionary representation
-        """
-        return {
-            'id': self.id,
-            'title': self.title,
-            'level': self.level,
-            'created_at': self.created_at
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> 'Position':
-        """
-        Deserialize position from dictionary.
-
-        Args:
-            data: Dictionary with position data
-
-        Returns:
-            Position instance
-
-        Raises:
-            ValidationError: If validation fails
-        """
-        try:
-            instance = cls(**data)
-            instance.validate()
-            return instance
-        except TypeError as e:
-            raise ValidationError(f"Invalid data for Position: {e}")
-        except ValidationError:
-            raise
 
