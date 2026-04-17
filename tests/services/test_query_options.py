@@ -29,7 +29,7 @@ def test_application_service_uses_default_sort_without_options():
     svc = ApplicationService.__new__(ApplicationService)
     svc._executor = fake_executor
 
-    svc.get_all_applications()
+    svc.get_all()
 
     assert "ORDER BY created_at DESC" in capture.last_query
 
@@ -52,7 +52,7 @@ def test_application_service_applies_filters_sort_and_pagination():
         limit=10,
         offset=20,
     )
-    svc.get_all_applications(options=options)
+    svc.get_all(options=options)
 
     assert "ORDER BY applied_date ASC" in capture.last_query
     assert "LIMIT %s" in capture.last_query
@@ -70,10 +70,10 @@ def test_company_service_default_and_custom_sort():
     svc = CompanyService.__new__(CompanyService)
     svc._executor = fake_executor
 
-    svc.get_all_companies()
+    svc.get_all()
     assert "ORDER BY created_at DESC" in capture.last_query
 
-    svc.get_all_companies(options=ListQueryOptions(sort_by="name", sort_dir="asc", limit=5))
+    svc.get_all(options=ListQueryOptions(sort_by="name", sort_dir="asc", limit=5))
     assert "ORDER BY name ASC" in capture.last_query
     assert capture.last_params == (5,)
 

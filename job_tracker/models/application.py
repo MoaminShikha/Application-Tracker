@@ -20,7 +20,7 @@ class Application(BaseModel):
         recruiter_id: Foreign key to recruiter (optional)
         job_id: External posting/job board ID (optional, max 100 chars)
         current_status: Foreign key to application_status (required)
-        applied_date: Date application was submitted (required, not in future, within 365 days)
+        applied_date: Date application was submitted (required, not in future)
         notes: Additional notes (optional, max 255 chars)
         created_at: Timestamp when created
         updated_at: Timestamp when last updated
@@ -46,7 +46,7 @@ class Application(BaseModel):
         - position_id: Required, must be positive
         - current_status: Required, must be positive
         - job_id: Optional, non-empty if provided, max 100 chars
-        - applied_date: Required, not in future, within last 365 days
+        - applied_date: Required, not in future
         - notes: Max 255 chars if provided
 
         Raises:
@@ -79,10 +79,6 @@ class Application(BaseModel):
 
         if self.applied_date > date.today():
             raise ValidationError(f"Applied date cannot be in the future: {self.applied_date}")
-
-        days_diff = (date.today() - self.applied_date).days
-        if days_diff > 365:
-            raise ValidationError(f"Applied date must be within last 365 days (was {days_diff} days ago)")
 
         # Check notes length
         if self.notes and len(self.notes) > 255:

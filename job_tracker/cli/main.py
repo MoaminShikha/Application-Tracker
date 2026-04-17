@@ -58,7 +58,7 @@ def build_cli() -> click.Group:
         """Add a new company to track applications for."""
         try:
             svc = CompanyService()
-            company = svc.create_company(name=name, location=location, industry=industry, notes=notes)
+            company = svc.create(name=name, location=location, industry=industry, notes=notes)
             click.echo(f"✅ Created company #{company.id}: {company.name}")
             if company.location:
                 click.echo(f"   📍 Location: {company.location}")
@@ -73,7 +73,7 @@ def build_cli() -> click.Group:
         """View all companies you're tracking."""
         try:
             svc = CompanyService()
-            companies = svc.get_all_companies()
+            companies = svc.get_all()
             if not companies:
                 click.echo("📭 No companies found. Add one with: add-company")
                 return
@@ -91,7 +91,7 @@ def build_cli() -> click.Group:
         """Add a job position/title."""
         try:
             svc = PositionService()
-            position = svc.create_position(title=title, level=level)
+            position = svc.create(title=title, level=level)
             click.echo(f"✅ Created position #{position.id}: {position.title} ({position.level})")
         except Exception as e:
             click.echo(f"❌ Error: {e}", err=True)
@@ -107,7 +107,7 @@ def build_cli() -> click.Group:
         """Add a recruiter or point of contact."""
         try:
             svc = RecruiterService()
-            recruiter = svc.create_recruiter(name=name, email=email, phone=phone, company_id=company_id)
+            recruiter = svc.create(name=name, email=email, phone=phone, company_id=company_id)
             click.echo(f"✅ Created recruiter #{recruiter.id}: {recruiter.name}")
             if recruiter.email:
                 click.echo(f"   📧 {recruiter.email}")
@@ -120,7 +120,7 @@ def build_cli() -> click.Group:
         """View all recruiters you're tracking."""
         try:
             svc = RecruiterService()
-            recruiters = svc.get_all_recruiters()
+            recruiters = svc.get_all()
             if not recruiters:
                 click.echo("📭 No recruiters found. Add one with: add-recruiter")
                 return
@@ -253,7 +253,7 @@ def build_cli() -> click.Group:
         """Log an event for an application (e.g., interview, feedback)."""
         try:
             svc = EventService()
-            event = svc.log_event(
+            event = svc.log(
                 application_id=application_id,
                 event_type=event_type,
                 event_date=_parse_datetime(event_date),
@@ -272,7 +272,7 @@ def build_cli() -> click.Group:
         """View timeline of events for an application."""
         try:
             svc = EventService()
-            events = svc.get_events_for_application(application_id)
+            events = svc.get_for_application(application_id)
             if not events:
                 click.echo(f"📭 No events found for application #{application_id}")
                 return

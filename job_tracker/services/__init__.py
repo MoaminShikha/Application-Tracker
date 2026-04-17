@@ -4,6 +4,7 @@ Handles CRUD operations and business rules.
 """
 
 from job_tracker.services.base_service import BaseService
+from job_tracker.services.crud_service import CRUDService
 from job_tracker.services.company_service import CompanyService
 from job_tracker.services.position_service import PositionService
 from job_tracker.services.recruiter_service import RecruiterService
@@ -14,6 +15,7 @@ from job_tracker.services.status_service import StatusService, ALLOWED_TRANSITIO
 
 __all__ = [
     "BaseService",
+    "CRUDService",
     "CompanyService",
     "PositionService",
     "RecruiterService",

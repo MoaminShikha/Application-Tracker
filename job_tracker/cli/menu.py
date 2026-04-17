@@ -23,8 +23,8 @@ def _build_menu_snapshot() -> list[str]:
         recruiter_svc = RecruiterService()
 
         overview = analytics.get_overview_counts()
-        company_count = len(company_svc.get_all_companies())
-        recruiter_count = len(recruiter_svc.get_all_recruiters())
+        company_count = len(company_svc.get_all())
+        recruiter_count = len(recruiter_svc.get_all())
 
         return [
             f"Applications: {overview.get('total_applications', 0)} total",
@@ -90,7 +90,7 @@ def display_main_menu():
 def display_companies_table():
     """Display companies in a nice table format."""
     svc = CompanyService()
-    companies = svc.get_all_companies()
+    companies = svc.get_all()
 
     if not companies:
         click.echo("\n📭 No companies found.")
@@ -120,7 +120,7 @@ def display_applications_table():
     position_svc = PositionService()
     status_svc = StatusService()
 
-    apps = app_svc.get_all_applications()
+    apps = app_svc.get_all()
 
     if not apps:
         click.echo("\n📭 No applications found.")
@@ -133,11 +133,11 @@ def display_applications_table():
 
     for a in apps:
         # Get company name
-        company = company_svc.get_company(a.company_id)
+        company = company_svc.get(a.company_id)
         company_name = company.name if company else f"ID {a.company_id}"
 
         # Get position title
-        position = position_svc.get_position(a.position_id)
+        position = position_svc.get(a.position_id)
         position_title = f"{position.title} ({position.level})" if position else f"ID {a.position_id}"
 
         # Get status name
@@ -169,7 +169,7 @@ def display_applications_table():
 def display_recruiters_table():
     """Display recruiters in a table format."""
     svc = RecruiterService()
-    recruiters = svc.get_all_recruiters()
+    recruiters = svc.get_all()
 
     if not recruiters:
         click.echo("\n📭 No recruiters found.")
@@ -204,7 +204,7 @@ def add_company_interactive():
 
     try:
         svc = CompanyService()
-        company = svc.create_company(
+        company = svc.create(
             name=name,
             location=location,
             industry=industry if industry else None,
@@ -233,7 +233,7 @@ def add_position_interactive():
 
     try:
         svc = PositionService()
-        position = svc.create_position(title=title, level=level)
+        position = svc.create(title=title, level=level)
         click.echo(f"\n✅ Success! Created position #{position.id}: {position.title} ({position.level})")
     except Exception as e:
         click.echo(f"\n❌ Error: {e}")
@@ -260,7 +260,7 @@ def add_recruiter_interactive():
 
     try:
         svc = RecruiterService()
-        recruiter = svc.create_recruiter(
+        recruiter = svc.create(
             name=name,
             email=email if email else None,
             phone=phone if phone else None,
@@ -289,7 +289,7 @@ def add_application_interactive():
 
     # Check if company exists
     company_svc = CompanyService()
-    companies = company_svc.get_all_companies()
+    companies = company_svc.get_all()
     existing_company = next((c for c in companies if c.name.lower() == company_name.lower()), None)
 
     if existing_company:
@@ -298,7 +298,7 @@ def add_application_interactive():
             company_id = existing_company.id
         else:
             click.echo("Creating new company entry...")
-            company = company_svc.create_company(
+            company = company_svc.create(
                 name=company_name,
                 location=location if location else None,
                 industry=industry if industry else None
@@ -306,7 +306,7 @@ def add_application_interactive():
             company_id = company.id
             click.echo(f"✅ Created new company #{company_id}")
     else:
-        company = company_svc.create_company(
+        company = company_svc.create(
             name=company_name,
             location=location if location else None,
             industry=industry if industry else None
@@ -331,7 +331,7 @@ def add_application_interactive():
 
     # Check if position exists
     position_svc = PositionService()
-    positions = position_svc.get_all_positions()
+    positions = position_svc.get_all()
     existing_position = next(
         (p for p in positions if p.title.lower() == position_title.lower() and p.level == position_level),
         None
@@ -341,7 +341,7 @@ def add_application_interactive():
         click.echo(f"✓ Found existing position: {existing_position.title} ({existing_position.level})")
         position_id = existing_position.id
     else:
-        position = position_svc.create_position(title=position_title, level=position_level)
+        position = position_svc.create(title=position_title, level=position_level)
         position_id = position.id
         click.echo(f"✅ Created position #{position_id}: {position.title} ({position.level})")
 
@@ -373,7 +373,7 @@ def add_application_interactive():
 
         # Check if recruiter exists
         recruiter_svc = RecruiterService()
-        recruiters = recruiter_svc.get_all_recruiters()
+        recruiters = recruiter_svc.get_all()
         existing_recruiter = next(
             (r for r in recruiters if r.name.lower() == recruiter_name.lower()),
             None
@@ -383,7 +383,7 @@ def add_application_interactive():
             click.echo(f"✓ Found existing recruiter: {existing_recruiter.name}")
             recruiter_id = existing_recruiter.id
         else:
-            recruiter = recruiter_svc.create_recruiter(
+            recruiter = recruiter_svc.create(
                 name=recruiter_name,
                 email=recruiter_email if recruiter_email else None,
                 company_id=company_id
@@ -398,7 +398,7 @@ def add_application_interactive():
     click.echo("\n" + "=" * 70)
     try:
         app_svc = ApplicationService()
-        app = app_svc.create_application(
+        app = app_svc.create(
             company_id=company_id,
             position_id=position_id,
             applied_date=applied_date,
@@ -431,7 +431,7 @@ def update_status_interactive():
 
     # Get current status
     app_svc = ApplicationService()
-    app = app_svc.get_application(app_id)
+    app = app_svc.get(app_id)
 
     if not app:
         click.echo(f"❌ Application #{app_id} not found")
@@ -459,7 +459,7 @@ def update_status_interactive():
     new_status_id = status_svc.get_status_id_by_name(new_status_name)
 
     try:
-        updated = app_svc.update_application_status(app_id, new_status_id)
+        updated = app_svc.update_status(app_id, new_status_id)
         click.echo(f"\n✅ Success! Updated application #{updated.id} to '{colorize_status(new_status_name)}'")
         click.echo("   ℹ️  Event logged automatically")
     except Exception as e:
@@ -477,7 +477,7 @@ def view_timeline_interactive():
     app_id = click.prompt("\nSelect application ID", type=int)
 
     event_svc = EventService()
-    events = event_svc.get_events_for_application(app_id)
+    events = event_svc.get_for_application(app_id)
 
     if not events:
         click.echo("\n⚠️  No events found for this application")
@@ -520,7 +520,7 @@ def log_event_interactive():
 
     try:
         svc = EventService()
-        event = svc.log_event(
+        event = svc.log(
             application_id=app_id,
             event_type=event_type,
             event_date=event_date,
@@ -650,7 +650,7 @@ def delete_application_interactive():
 
     try:
         svc = ApplicationService()
-        if svc.delete_application(app_id):
+        if svc.delete(app_id):
             click.echo(f"\n✅ Application #{app_id} deleted successfully.")
         else:
             click.echo(f"\n❌ Application #{app_id} not found or could not be deleted.")
@@ -675,7 +675,7 @@ def delete_company_interactive():
 
     try:
         svc = CompanyService()
-        if svc.delete_company(company_id):
+        if svc.delete(company_id):
             click.echo(f"\n✅ Company #{company_id} deleted successfully.")
         else:
             click.echo(f"\n❌ Company #{company_id} not found or could not be deleted.")
@@ -690,7 +690,7 @@ def delete_position_interactive():
     click.echo("=" * 70)
 
     position_svc = PositionService()
-    positions = position_svc.get_all_positions()
+    positions = position_svc.get_all()
 
     if not positions:
         click.echo("\n❌ No positions found!")
@@ -709,7 +709,7 @@ def delete_position_interactive():
 
     try:
         svc = PositionService()
-        if svc.delete_position(position_id):
+        if svc.delete(position_id):
             click.echo(f"\n✅ Position #{position_id} deleted successfully.")
         else:
             click.echo(f"\n❌ Position #{position_id} not found or could not be deleted.")
@@ -734,7 +734,7 @@ def delete_recruiter_interactive():
 
     try:
         svc = RecruiterService()
-        if svc.delete_recruiter(recruiter_id):
+        if svc.delete(recruiter_id):
             click.echo(f"\n✅ Recruiter #{recruiter_id} deleted successfully.")
         else:
             click.echo(f"\n❌ Recruiter #{recruiter_id} not found or could not be deleted.")
@@ -769,7 +769,7 @@ def menu():
         elif choice == 8:
             click.echo("\n💼 Available positions:")
             position_svc = PositionService()
-            positions = position_svc.get_all_positions()
+            positions = position_svc.get_all()
             if not positions:
                 click.echo("📭 No positions found yet.")
                 click.echo("💡 Tip: Positions are created when you add applications (option 1)")

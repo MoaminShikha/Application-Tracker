@@ -11,7 +11,7 @@ from job_tracker.services.query_options import ApplicationQueryOptions
 
 @runtime_checkable
 class _ApplicationServicePort(Protocol):
-    def create_application(
+    def create(
         self,
         company_id: int,
         position_id: int,
@@ -21,9 +21,9 @@ class _ApplicationServicePort(Protocol):
         notes: Optional[str] = None,
     ) -> Application: ...
 
-    def get_all_applications(self, options: Optional[ApplicationQueryOptions] = None) -> List[Application]: ...
+    def get_all(self, options: Optional[ApplicationQueryOptions] = None) -> List[Application]: ...
 
-    def update_application_status(self, application_id: int, new_status: int) -> Optional[Application]: ...
+    def update_status(self, application_id: int, new_status: int) -> Optional[Application]: ...
 
 
 @runtime_checkable
@@ -61,7 +61,7 @@ class ApplicationFlow:
         notes: Optional[str] = None,
     ) -> Application:
         try:
-            return self.application_service.create_application(
+            return self.application_service.create(
                 company_id=company_id,
                 position_id=position_id,
                 applied_date=applied_date,
@@ -74,13 +74,13 @@ class ApplicationFlow:
 
     def list_applications(self, options: Optional[ApplicationQueryOptions] = None) -> List[Application]:
         try:
-            return self.application_service.get_all_applications(options=options)
+            return self.application_service.get_all(options=options)
         except Exception as exc:
             raise map_to_domain_error(exc)
 
     def update_status(self, application_id: int, new_status_input: str) -> Application:
         try:
-            updated = self.application_service.update_application_status(
+            updated = self.application_service.update_status(
                 application_id=application_id,
                 new_status=self._resolve_status_id(new_status_input),
             )
@@ -89,4 +89,3 @@ class ApplicationFlow:
             return updated
         except Exception as exc:
             raise map_to_domain_error(exc)
-

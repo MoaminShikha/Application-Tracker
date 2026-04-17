@@ -57,7 +57,7 @@ def seed_data():
 
     created_companies = []
     for comp in companies:
-        created = company_svc.create_company(**comp)
+        created = company_svc.create(**comp)
         created_companies.append(created)
         print(f"  ✓ {created.name}")
 
@@ -78,7 +78,7 @@ def seed_data():
 
     created_positions = []
     for pos in positions:
-        created = position_svc.create_position(**pos)
+        created = position_svc.create(**pos)
         created_positions.append(created)
         print(f"  ✓ {created.title} ({created.level})")
 
@@ -106,7 +106,7 @@ def seed_data():
 
     created_recruiters = []
     for rec in recruiters:
-        created = recruiter_svc.create_recruiter(**rec)
+        created = recruiter_svc.create(**rec)
         created_recruiters.append(created)
         print(f"  ✓ {created.name} ({created.email})")
 
@@ -114,15 +114,15 @@ def seed_data():
     print("\n📝 Creating applications...")
 
     # Application 1: Google - Interview Scheduled
-    app1 = app_svc.create_application(
+    app1 = app_svc.create(
         company_id=created_companies[0].id,
         position_id=created_positions[0].id,
         recruiter_id=created_recruiters[0].id,
         applied_date=date.today() - timedelta(days=14),
         notes="Referral from former colleague. Strong team fit."
     )
-    app_svc.update_application_status(app1.id, status_id("Interview Scheduled"))
-    event_svc.log_event(
+    app_svc.update_status(app1.id, status_id("Interview Scheduled"))
+    event_svc.log(
         app1.id,
         "Interview Scheduled",
         datetime.now() - timedelta(days=2),
@@ -131,16 +131,16 @@ def seed_data():
     print(f"  ✓ Application #{app1.id}: Google - Interview Scheduled")
 
     # Application 2: Microsoft - Interviewed (waiting for offer)
-    app2 = app_svc.create_application(
+    app2 = app_svc.create(
         company_id=created_companies[1].id,
         position_id=created_positions[2].id,
         recruiter_id=created_recruiters[1].id,
         applied_date=date.today() - timedelta(days=21),
         notes="Applied via LinkedIn. Competitive compensation package."
     )
-    app_svc.update_application_status(app2.id, status_id("Interview Scheduled"))
-    app_svc.update_application_status(app2.id, status_id("Interviewed"))
-    event_svc.log_event(
+    app_svc.update_status(app2.id, status_id("Interview Scheduled"))
+    app_svc.update_status(app2.id, status_id("Interviewed"))
+    event_svc.log(
         app2.id,
         "Interview",
         datetime.now() - timedelta(days=3),
@@ -149,17 +149,17 @@ def seed_data():
     print(f"  ✓ Application #{app2.id}: Microsoft - Interviewed")
 
     # Application 3: Amazon - Offer!
-    app3 = app_svc.create_application(
+    app3 = app_svc.create(
         company_id=created_companies[2].id,
         position_id=created_positions[5].id,
         recruiter_id=created_recruiters[2].id,
         applied_date=date.today() - timedelta(days=35),
         notes="Dream role - data engineering with distributed systems focus"
     )
-    app_svc.update_application_status(app3.id, status_id("Interview Scheduled"))
-    app_svc.update_application_status(app3.id, status_id("Interviewed"))
-    app_svc.update_application_status(app3.id, status_id("Offer"))
-    event_svc.log_event(
+    app_svc.update_status(app3.id, status_id("Interview Scheduled"))
+    app_svc.update_status(app3.id, status_id("Interviewed"))
+    app_svc.update_status(app3.id, status_id("Offer"))
+    event_svc.log(
         app3.id,
         "Offer Received",
         datetime.now() - timedelta(days=1),
@@ -168,7 +168,7 @@ def seed_data():
     print(f"  ✓ Application #{app3.id}: Amazon - Offer Received!")
 
     # Application 4: Meta - Recently Applied
-    app4 = app_svc.create_application(
+    app4 = app_svc.create(
         company_id=created_companies[3].id,
         position_id=created_positions[4].id,
         applied_date=date.today() - timedelta(days=5),
@@ -177,16 +177,16 @@ def seed_data():
     print(f"  ✓ Application #{app4.id}: Meta - Applied")
 
     # Application 5: Stripe - Rejected after interview
-    app5 = app_svc.create_application(
+    app5 = app_svc.create(
         company_id=created_companies[6].id,
         position_id=created_positions[0].id,
         applied_date=date.today() - timedelta(days=42),
         notes="Payment infrastructure team"
     )
-    app_svc.update_application_status(app5.id, status_id("Interview Scheduled"))
-    app_svc.update_application_status(app5.id, status_id("Interviewed"))
-    app_svc.update_application_status(app5.id, status_id("Rejected"))
-    event_svc.log_event(
+    app_svc.update_status(app5.id, status_id("Interview Scheduled"))
+    app_svc.update_status(app5.id, status_id("Interviewed"))
+    app_svc.update_status(app5.id, status_id("Rejected"))
+    event_svc.log(
         app5.id,
         "Rejection",
         datetime.now() - timedelta(days=7),
@@ -195,7 +195,7 @@ def seed_data():
     print(f"  ✓ Application #{app5.id}: Stripe - Rejected")
 
     # Application 6: Apple - Applied recently
-    app6 = app_svc.create_application(
+    app6 = app_svc.create(
         company_id=created_companies[4].id,
         position_id=created_positions[9].id,
         applied_date=date.today() - timedelta(days=2),
@@ -204,14 +204,14 @@ def seed_data():
     print(f"  ✓ Application #{app6.id}: Apple - Applied")
 
     # Application 7: Netflix - Withdrawn
-    app7 = app_svc.create_application(
+    app7 = app_svc.create(
         company_id=created_companies[5].id,
         position_id=created_positions[3].id,
         applied_date=date.today() - timedelta(days=28),
         notes="Culture concerns after research"
     )
-    app_svc.update_application_status(app7.id, status_id("Withdrawn"))
-    event_svc.log_event(
+    app_svc.update_status(app7.id, status_id("Withdrawn"))
+    event_svc.log(
         app7.id,
         "Withdrawal",
         datetime.now() - timedelta(days=12),
@@ -220,14 +220,14 @@ def seed_data():
     print(f"  ✓ Application #{app7.id}: Netflix - Withdrawn")
 
     # Application 8: Databricks - Interview Scheduled
-    app8 = app_svc.create_application(
+    app8 = app_svc.create(
         company_id=created_companies[7].id,
         position_id=created_positions[5].id,
         applied_date=date.today() - timedelta(days=18),
         notes="Exciting opportunity in data infrastructure"
     )
-    app_svc.update_application_status(app8.id, status_id("Interview Scheduled"))
-    event_svc.log_event(
+    app_svc.update_status(app8.id, status_id("Interview Scheduled"))
+    event_svc.log(
         app8.id,
         "Interview Scheduled",
         datetime.now() - timedelta(days=1),

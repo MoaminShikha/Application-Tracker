@@ -65,7 +65,7 @@ def prompt_recruiter_details():
     if has_company:
         # Show companies
         svc = CompanyService()
-        companies = svc.get_all_companies()
+        companies = svc.get_all()
         if companies:
             click.echo("\nAvailable companies:")
             for c in companies:
@@ -89,7 +89,7 @@ def prompt_application_details():
 
     # Show companies
     company_svc = CompanyService()
-    companies = company_svc.get_all_companies()
+    companies = company_svc.get_all()
 
     if not companies:
         click.echo("❌ No companies found! Please add companies first with 'add-company'")
@@ -103,7 +103,7 @@ def prompt_application_details():
 
     # Show positions
     position_svc = PositionService()
-    positions = position_svc.get_all_positions()
+    positions = position_svc.get_all()
 
     if not positions:
         click.echo("❌ No positions found! Please add positions first with 'add-position'")
@@ -129,7 +129,7 @@ def prompt_application_details():
     recruiter_id = None
     if has_recruiter:
         recruiter_svc = RecruiterService()
-        recruiters = recruiter_svc.get_all_recruiters()
+        recruiters = recruiter_svc.get_all()
         if recruiters:
             click.echo("\n👤 Available recruiters:")
             for r in recruiters:
@@ -159,7 +159,7 @@ def prompt_status_update():
 
     # Show applications
     app_svc = ApplicationService()
-    apps = app_svc.get_all_applications()
+    apps = app_svc.get_all()
 
     if not apps:
         click.echo("❌ No applications found! Add applications first with 'add-application'")
@@ -175,7 +175,7 @@ def prompt_status_update():
     application_id = click.prompt("Select application ID to update", type=int)
 
     # Get current status
-    app = app_svc.get_application(application_id)
+    app = app_svc.get(application_id)
     if not app:
         click.echo(f"❌ Application {application_id} not found")
         raise click.Abort()
@@ -213,7 +213,7 @@ def prompt_event_details():
 
     # Show applications
     app_svc = ApplicationService()
-    apps = app_svc.get_all_applications()
+    apps = app_svc.get_all()
 
     if not apps:
         click.echo("❌ No applications found!")
@@ -256,7 +256,7 @@ def interactive_add_company():
     try:
         details = prompt_company_details()
         svc = CompanyService()
-        company = svc.create_company(**details)
+        company = svc.create(**details)
         click.echo(f"\n✅ Created company #{company.id}: {company.name}")
     except Exception as e:
         click.echo(f"\n❌ Error: {e}", err=True)
@@ -268,7 +268,7 @@ def interactive_add_position():
     try:
         details = prompt_position_details()
         svc = PositionService()
-        position = svc.create_position(**details)
+        position = svc.create(**details)
         click.echo(f"\n✅ Created position #{position.id}: {position.title} ({position.level})")
     except Exception as e:
         click.echo(f"\n❌ Error: {e}", err=True)
@@ -280,7 +280,7 @@ def interactive_add_recruiter():
     try:
         details = prompt_recruiter_details()
         svc = RecruiterService()
-        recruiter = svc.create_recruiter(**details)
+        recruiter = svc.create(**details)
         click.echo(f"\n✅ Created recruiter #{recruiter.id}: {recruiter.name}")
     except Exception as e:
         click.echo(f"\n❌ Error: {e}", err=True)
@@ -292,7 +292,7 @@ def interactive_add_application():
     try:
         details = prompt_application_details()
         svc = ApplicationService()
-        app = svc.create_application(**details)
+        app = svc.create(**details)
         message = f"\n✅ Created application #{app.id} for company ID {app.company_id}"
         if app.job_id:
             message += f" (Job ID: {app.job_id})"
@@ -307,7 +307,7 @@ def interactive_update_status():
     try:
         details = prompt_status_update()
         svc = ApplicationService()
-        app = svc.update_application_status(details["application_id"], details["new_status_id"])
+        app = svc.update_status(details["application_id"], details["new_status_id"])
         click.echo(f"\n✅ Updated application #{app.id} to '{details['new_status_name']}'")
     except Exception as e:
         click.echo(f"\n❌ Error: {e}", err=True)
@@ -319,7 +319,7 @@ def interactive_log_event():
     try:
         details = prompt_event_details()
         svc = EventService()
-        event = svc.log_event(**details)
+        event = svc.log(**details)
         click.echo(f"\n✅ Logged event #{event.id} for application #{event.application_id}")
     except Exception as e:
         click.echo(f"\n❌ Error: {e}", err=True)
@@ -333,7 +333,7 @@ def interactive_show_history():
         click.echo("=" * 50)
 
         app_svc = ApplicationService()
-        apps = app_svc.get_all_applications()
+        apps = app_svc.get_all()
 
         if not apps:
             click.echo("❌ No applications found!")
@@ -346,7 +346,7 @@ def interactive_show_history():
         application_id = click.prompt("Select application ID", type=int)
 
         event_svc = EventService()
-        events = event_svc.get_events_for_application(application_id)
+        events = event_svc.get_for_application(application_id)
 
         if not events:
             click.echo("\n⚠️  No events found for this application.")
@@ -368,7 +368,7 @@ def interactive_delete_application():
         click.echo("=" * 50)
 
         app_svc = ApplicationService()
-        apps = app_svc.get_all_applications()
+        apps = app_svc.get_all()
 
         if not apps:
             click.echo("❌ No applications found!")
@@ -386,7 +386,7 @@ def interactive_delete_application():
             return
 
         svc = ApplicationService()
-        if svc.delete_application(application_id):
+        if svc.delete(application_id):
             click.echo(f"\n✅ Application #{application_id} deleted successfully.")
         else:
             click.echo(f"\n❌ Application #{application_id} not found or could not be deleted.")
@@ -402,7 +402,7 @@ def interactive_delete_company():
         click.echo("=" * 50)
 
         company_svc = CompanyService()
-        companies = company_svc.get_all_companies()
+        companies = company_svc.get_all()
 
         if not companies:
             click.echo("❌ No companies found!")
@@ -420,7 +420,7 @@ def interactive_delete_company():
             return
 
         svc = CompanyService()
-        if svc.delete_company(company_id):
+        if svc.delete(company_id):
             click.echo(f"\n✅ Company #{company_id} deleted successfully.")
         else:
             click.echo(f"\n❌ Company #{company_id} not found or could not be deleted.")
@@ -436,7 +436,7 @@ def interactive_delete_position():
         click.echo("=" * 50)
 
         position_svc = PositionService()
-        positions = position_svc.get_all_positions()
+        positions = position_svc.get_all()
 
         if not positions:
             click.echo("❌ No positions found!")
@@ -454,7 +454,7 @@ def interactive_delete_position():
             return
 
         svc = PositionService()
-        if svc.delete_position(position_id):
+        if svc.delete(position_id):
             click.echo(f"\n✅ Position #{position_id} deleted successfully.")
         else:
             click.echo(f"\n❌ Position #{position_id} not found or could not be deleted.")
@@ -470,7 +470,7 @@ def interactive_delete_recruiter():
         click.echo("=" * 50)
 
         recruiter_svc = RecruiterService()
-        recruiters = recruiter_svc.get_all_recruiters()
+        recruiters = recruiter_svc.get_all()
 
         if not recruiters:
             click.echo("❌ No recruiters found!")
@@ -488,7 +488,7 @@ def interactive_delete_recruiter():
             return
 
         svc = RecruiterService()
-        if svc.delete_recruiter(recruiter_id):
+        if svc.delete(recruiter_id):
             click.echo(f"\n✅ Recruiter #{recruiter_id} deleted successfully.")
         else:
             click.echo(f"\n❌ Recruiter #{recruiter_id} not found or could not be deleted.")

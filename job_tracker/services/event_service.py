@@ -10,34 +10,38 @@ from job_tracker.services.base_service import BaseService
 class EventService(BaseService):
     """Log and read application events (insert-only design)."""
 
-    def log_event(
+    _select_columns = "id, application_id, event_type, event_date, notes, created_at"
+
+    def log(
         self,
         application_id: int,
         event_type: str,
         event_date: Optional[datetime] = None,
         notes: Optional[str] = None,
     ) -> ApplicationEvent:
-        event = ApplicationEvent(
+        """Validate and persist an application event."""
+        # Validate via model construction (__post_init__ → validate)
+        ApplicationEvent(
             application_id=application_id,
             event_type=event_type,
-            event_date=event_date or datetime.now(),  # For validation only
+            event_date=event_date or datetime.now(),
             notes=notes,
         )
-        event.validate()
 
-        # If event_date is provided, use it; otherwise let DB use NOW()
+        # Use explicit event_date column only when the caller supplies one;
+        # otherwise let the DB default (NOW()) fill it in.
         if event_date is not None:
-            query = """
+            query = f"""
                 INSERT INTO application_events (application_id, event_type, event_date, notes)
                 VALUES (%s, %s, %s, %s)
-                RETURNING id, application_id, event_type, event_date, notes, created_at
+                RETURNING {self._select_columns}
             """
             params = (application_id, event_type, event_date, notes)
         else:
-            query = """
+            query = f"""
                 INSERT INTO application_events (application_id, event_type, notes)
                 VALUES (%s, %s, %s)
-                RETURNING id, application_id, event_type, event_date, notes, created_at
+                RETURNING {self._select_columns}
             """
             params = (application_id, event_type, notes)
 
@@ -45,26 +49,21 @@ class EventService(BaseService):
             row = executor.execute_insert_returning(query, params)
             return ApplicationEvent.from_dict(row)
 
-    def get_event(self, event_id: int) -> Optional[ApplicationEvent]:
-        query = """
-            SELECT id, application_id, event_type, event_date, notes, created_at
-            FROM application_events
-            WHERE id = %s
-        """
-
+    def get(self, event_id: int) -> Optional[ApplicationEvent]:
+        """Fetch a single event by primary key."""
+        query = f"SELECT {self._select_columns} FROM application_events WHERE id = %s"
         with self._executor() as executor:
             row = executor.execute_query_single(query, (event_id,))
             return ApplicationEvent.from_dict(row) if row else None
 
-    def get_events_for_application(self, application_id: int) -> List[ApplicationEvent]:
-        query = """
-            SELECT id, application_id, event_type, event_date, notes, created_at
+    def get_for_application(self, application_id: int) -> List[ApplicationEvent]:
+        """Fetch all events for an application ordered chronologically."""
+        query = f"""
+            SELECT {self._select_columns}
             FROM application_events
             WHERE application_id = %s
             ORDER BY event_date ASC
         """
-
         with self._executor() as executor:
             rows = executor.execute_query(query, (application_id,))
             return [ApplicationEvent.from_dict(row) for row in rows]
-

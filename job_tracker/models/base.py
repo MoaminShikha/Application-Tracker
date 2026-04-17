@@ -33,6 +33,10 @@ class BaseModel(ABC):
         Must be implemented by every subclass.
         """
 
+    def __post_init__(self) -> None:
+        """Called automatically by dataclass __init__; triggers validation on construction."""
+        self.validate()
+
     def to_dict(self) -> Dict[str, Any]:
         """
         Serialize model to dictionary.
@@ -57,9 +61,8 @@ class BaseModel(ABC):
             ValidationError: If data is invalid
         """
         try:
-            instance = cls(**data)
-            instance.validate()
-            return instance
+            # __post_init__ → validate() is called automatically inside cls(**data)
+            return cls(**data)
         except TypeError as e:
             raise ValidationError(f"Invalid data for {cls.__name__}: {e}")
         except ValidationError:
