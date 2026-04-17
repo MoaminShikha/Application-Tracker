@@ -65,8 +65,8 @@ class Application(BaseModel):
             self.job_id = self.job_id.strip()
             if not self.job_id:
                 raise ValidationError("Job ID cannot be empty when provided")
-            if len(self.job_id) > 100:
-                raise ValidationError("Job ID cannot exceed 100 characters")
+            if len(self.job_id) > 2048:
+                raise ValidationError("Job ID / URL cannot exceed 2048 characters")
 
         if self.applied_date is None:
             raise ValidationError("Applied date is required")

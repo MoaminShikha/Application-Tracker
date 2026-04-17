@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS applications
     company_id     INTEGER     NOT NULL REFERENCES companies (id) ON DELETE RESTRICT,
     position_id    INTEGER     NOT NULL REFERENCES positions (id) ON DELETE RESTRICT,
     recruiter_id   INTEGER     REFERENCES recruiters (id) ON DELETE SET NULL,
-    job_id         VARCHAR(100),
+    job_id         TEXT,
     current_status INTEGER     NOT NULL REFERENCES application_statuses (id) ON DELETE RESTRICT,
     applied_date   DATE        NOT NULL DEFAULT CURRENT_DATE,
     notes          VARCHAR(255),

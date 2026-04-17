@@ -62,7 +62,10 @@ class ApplicationEvent(BaseModel):
             except ValueError:
                 raise ValidationError(f"Invalid date format: {self.event_date}")
 
-        if self.event_date > datetime.now():
+        # Strip timezone before comparing so offset-aware DB timestamps work alongside
+        # naive datetime.now().  Both sides are treated as UTC.
+        event_date_naive = self.event_date.replace(tzinfo=None)
+        if event_date_naive > datetime.now():
             raise ValidationError(f"Event date cannot be in the future: {self.event_date}")
 
         if self.notes and len(self.notes) > 255:

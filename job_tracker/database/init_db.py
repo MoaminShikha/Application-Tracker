@@ -110,7 +110,11 @@ class InitDB:
         """Apply additive schema updates for existing databases."""
         compatibility_sql = """
             ALTER TABLE applications
-            ADD COLUMN IF NOT EXISTS job_id VARCHAR(100);
+            ADD COLUMN IF NOT EXISTS job_id TEXT;
+
+            -- Widen existing VARCHAR(100) to TEXT so URLs fit
+            ALTER TABLE applications
+            ALTER COLUMN job_id TYPE TEXT;
 
             ALTER TABLE applications
             DROP CONSTRAINT IF EXISTS applications_job_id_check;
