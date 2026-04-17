@@ -129,6 +129,14 @@ python -m job_tracker.cli menu
 
 This launches an interactive menu with numbered options and formatted tables.
 
+### Textual UI (Phase 2 Preview)
+
+```bash
+python -m job_tracker.tui
+```
+
+This launches the Textual read-only UI (dashboard + applications table) in parallel to the existing Click CLI.
+
 ### Direct Commands
 
 ```bash
@@ -157,6 +165,7 @@ job_tracker/
 ├── domain/             # Shared domain-level errors and adapters
 ├── analytics/          # Reporting and metrics calculation
 ├── cli/                # Command-line interface
+├── tui/                # Textual UI shell (phase-based rollout)
 ├── database/           # Connection management and query execution
 ├── models/             # Data models with validation
 ├── use_cases/          # Thin orchestration layer for interface adapters
